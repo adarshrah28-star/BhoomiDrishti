@@ -1,0 +1,16 @@
+project_id,project_name,state,district,project_type,stage,land_area,affected_families,compensation_pending,pending_approvals,legal_disputes,documentation_completion,possession_acquired,rr_progress,stakeholder_responsiveness,latitude,longitude,main_risk_factor
+BD-001,Mountain Highway Package 01,Uttarakhand,Chamoli,Highway,Land Acquisition,148.5,468,94,8,12,38,14,22,28,30.4100,79.3200,Compensation pending
+BD-002,Char Dham Link Road Package 04,Uttarakhand,Rudraprayag,Road,Pre-Construction,92.3,268,64,4,6,61,45,47,55,30.2840,78.9810,Slope instability
+BD-003,Bhagirathi Valley Bypass,Uttarakhand,Uttarkashi,Road,Land Acquisition,76.8,199,82,7,9,48,26,33,38,30.7300,78.4400,Legal disputes
+BD-004,Dehradun Ring Road Phase II,Uttarakhand,Dehradun,Highway,Construction,210.4,536,32,2,3,84,72,69,74,30.3165,78.0322,Pending approvals
+BD-005,Haridwar Industrial Corridor,Uttarakhand,Haridwar,Industrial,Pre-Construction,165.0,308,41,3,4,76,63,58,68,29.9457,78.1642,Documentation gaps
+BD-006,Rishikesh Riverfront Development,Uttarakhand,Rishikesh,Urban,Planning,54.6,147,55,4,5,66,48,52,60,30.1033,78.2948,Flood exposure
+BD-007,Nainital Hill Road Widening,Uttarakhand,Nainital,Road,Land Acquisition,38.2,121,69,5,6,59,38,44,51,29.3919,79.4542,Landslide exposure
+BD-008,Pithoragarh Border Link Bridge,Uttarakhand,Pithoragarh,Bridge,Pre-Construction,22.7,64,58,6,4,62,41,46,49,29.5829,80.2182,Terrain difficulty
+BD-009,Patna Eastern Expressway Package 07,Bihar,Patna,Expressway,Land Acquisition,320.7,894,88,8,12,41,18,25,31,25.5941,85.1376,Legal disputes
+BD-010,Nagpur Logistics Park,Maharashtra,Nagpur,Industrial,Construction,245.3,402,28,1,2,88,79,75,81,21.1458,79.0882,Approval backlog
+BD-011,Guwahati Flood Resilient Corridor,Assam,Kamrup,Highway,Pre-Construction,178.9,521,61,5,6,64,44,49,54,26.1445,91.7362,Flood exposure
+BD-012,Jaipur Outer Ring Road Package 03,Rajasthan,Jaipur,Highway,Construction,268.4,377,35,2,3,82,71,68,77,26.9124,75.7873,Compensation pending
+BD-013,Coimbatore Metro Feeder Line,Tamil Nadu,Coimbatore,Rail,Planning,96.1,289,47,3,4,73,55,57,66,11.0168,76.9558,Documentation gaps
+BD-014,Srinagar Tunnel Approach Road,Jammu and Kashmir,Srinagar,Road,Land Acquisition,64.5,188,72,6,8,52,33,39,45,34.0837,74.7973,Legal disputes
+BD-015,Bhubaneswar Coastal Highway Link,Odisha,Khordha,Highway,Pre-Construction,142.8,336,44,3,5,71,52,56,63,20.2961,85.8245,Cyclone and flood exposure

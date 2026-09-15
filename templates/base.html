@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<div class="shell">
+
+  <!-- ============ Sidebar ============ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-row">
+        <!-- Contour mark: nested elevation lines, drawn inline so it works offline -->
+        <svg class="brand-mark" viewBox="0 0 34 34" aria-hidden="true">
+          <path d="M3 26c4-7 9-3 13-8s4-12 10-13" fill="none" stroke="#35d0ba" stroke-width="2" stroke-linecap="round"/>
+          <path d="M5 31c5-6 11-4 14-10s5-10 11-11" fill="none" stroke="#4c9aff" stroke-width="1.6" stroke-linecap="round" opacity=".75"/>
+          <circle cx="21" cy="13" r="2.6" fill="#35d0ba"/>
+        </svg>
+        <div>
+          <div class="brand-name">{{ app_name }}</div>
+          <div class="brand-tag">{{ tagline }}</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-group-label" data-i18n="group.overview">Overview</div>
+      <a href="{{ url_for('dashboard') }}" class="{{ 'active' if page=='dashboard' }} {{ 'focus-hint' if 'dashboard' in role_focus }}"><span class="ico">▣</span><span data-i18n="nav.dashboard">Dashboard</span></a>
+      <a href="{{ url_for('projects_page') }}" class="{{ 'active' if page=='projects' }} {{ 'focus-hint' if 'projects' in role_focus }}"><span class="ico">▤</span><span data-i18n="nav.projects">Project Monitoring</span></a>
+      <a href="{{ url_for('risk_map') }}" class="{{ 'active' if page=='map' }}"><span class="ico">◎</span><span data-i18n="nav.map">GIS Risk Map</span></a>
+      <a href="{{ url_for('alerts_page') }}" class="{{ 'active' if page=='alerts' }} {{ 'focus-hint' if 'alerts' in role_focus }}"><span class="ico">⚠</span><span data-i18n="nav.alerts">Alerts</span></a>
+
+      <div class="nav-group-label" data-i18n="group.assess">Assess a site</div>
+      <a href="{{ url_for('before_build') }}" class="{{ 'active' if page=='before_build' }} {{ 'focus-hint' if 'before_build' in role_focus }}"><span class="ico">◈</span><span data-i18n="nav.before_build">Before You Build</span></a>
+      <a href="{{ url_for('study_area') }}" class="{{ 'active' if page=='study_area' }} {{ 'focus-hint' if 'study_area' in role_focus }}"><span class="ico">▲</span><span data-i18n="nav.study_area">Study Area</span></a>
+      <a href="{{ url_for('land_history') }}" class="{{ 'active' if page=='land_history' }} {{ 'focus-hint' if 'land_history' in role_focus }}"><span class="ico">≡</span><span data-i18n="nav.land_history">Land History</span></a>
+      <a href="{{ url_for('planning') }}" class="{{ 'active' if page=='planning' }}"><span class="ico">✎</span><span data-i18n="nav.planning">Proposed Plan</span></a>
+      <a href="{{ url_for('terrain') }}" class="{{ 'active' if page=='terrain' }} {{ 'focus-hint' if 'terrain' in role_focus }}"><span class="ico">⛰</span><span data-i18n="nav.terrain">Terrain Analysis</span></a>
+      <a href="{{ url_for('disaster') }}" class="{{ 'active' if page=='disaster' }}"><span class="ico">◐</span><span data-i18n="nav.disaster">Disaster Risk</span></a>
+      <a href="{{ url_for('geotechnical') }}" class="{{ 'active' if page=='geotechnical' }} {{ 'focus-hint' if 'geotechnical' in role_focus }}"><span class="ico">▽</span><span data-i18n="nav.geotechnical">Geotechnical Screening</span></a>
+      <a href="{{ url_for('comparison') }}" class="{{ 'active' if page=='comparison' }} {{ 'focus-hint' if 'comparison' in role_focus }}"><span class="ico">⇄</span><span data-i18n="nav.comparison">Site Comparison</span></a>
+
+      <div class="nav-group-label" data-i18n="group.act">Act on findings</div>
+      <a href="{{ url_for('prediction') }}" class="{{ 'active' if page=='prediction' }} {{ 'focus-hint' if 'prediction' in role_focus }}"><span class="ico">◉</span><span data-i18n="nav.prediction">Risk Prediction</span></a>
+      <a href="{{ url_for('recommendations') }}" class="{{ 'active' if page=='recommendations' }} {{ 'focus-hint' if 'recommendations' in role_focus }}"><span class="ico">✦</span><span data-i18n="nav.recommendations">AI Recommendations</span></a>
+      <a href="{{ url_for('contractor') }}" class="{{ 'active' if page=='contractor' }} {{ 'focus-hint' if 'contractor' in role_focus }}"><span class="ico">⚒</span><span data-i18n="nav.contractor">Contractor View</span></a>
+      <a href="{{ url_for('assistant') }}" class="{{ 'active' if page=='assistant' }}"><span class="ico">✉</span><span data-i18n="nav.assistant">BhoomiAI Assistant</span></a>
+
+      <div class="nav-group-label" data-i18n="group.reference">Reference</div>
+      <a href="{{ url_for('data_intelligence') }}" class="{{ 'active' if page=='data_intelligence' }} {{ 'focus-hint' if 'data_intelligence' in role_focus }}"><span class="ico">⇅</span><span data-i18n="nav.data_intelligence">Data Intelligence</span></a>
+      <a href="{{ url_for('resources') }}" class="{{ 'active' if page=='resources' }}"><span class="ico">▦</span><span data-i18n="nav.resources">Resources</span></a>
+      <a href="{{ url_for('about') }}" class="{{ 'active' if page=='about' }}"><span class="ico">ⓘ</span><span data-i18n="nav.about">About</span></a>
+      <a href="{{ url_for('logout') }}"><span class="ico">⏻</span><span data-i18n="nav.logout">Sign out</span></a>
+    </nav>
+  </aside>
+
+  <!-- ============ Main area ============ -->
+  <div class="main">
+    <header class="topbar">
+      <div class="page-title">{% block page_title %}{% endblock %}</div>
+      <div class="spacer"></div>
+      <div class="lang-toggle" role="group" aria-label="Language">
+        <button type="button" data-lang="en">English</button>
+        <button type="button" data-lang="hi">हिन्दी</button>
+      </div>
+      <div class="role-chip">
+        <span class="who">{{ current_user }}</span>
+        <span class="what">{{ current_role }}</span>
+      </div>
+    </header>
+
+    <main class="content">
+      {% block content %}{% endblock %}
+
+      <p class="faint" style="margin-top:28px; border-top:1px solid var(--line); padding-top:14px;">
+        {{ disclaimer }}
+      </p>
+    </main>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

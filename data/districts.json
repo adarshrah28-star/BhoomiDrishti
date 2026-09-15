@@ -1,0 +1,136 @@
+{
+  "_note": "PROTOTYPE SAMPLE DATA. Illustrative values compiled for demonstration only. Replace with verified DEM, GSI landslide susceptibility, CWC flood and BIS seismic zone datasets before any real use.",
+  "districts": [
+    {
+      "name": "Dehradun", "state": "Uttarakhand", "lat": 30.3165, "lon": 78.0322,
+      "elevation_m": 640, "avg_slope_deg": 11, "terrain": "Valley / Doon plain",
+      "landslide": 38, "flood": 52, "flash_flood": 44, "seismic_zone": 4, "earthquake": 62,
+      "cloudburst": 35, "extreme_rainfall": 58, "accessibility": 88, "drainage": 62, "soil": "Alluvial gravel"
+    },
+    {
+      "name": "Haridwar", "state": "Uttarakhand", "lat": 29.9457, "lon": 78.1642,
+      "elevation_m": 314, "avg_slope_deg": 4, "terrain": "Plain / river bank",
+      "landslide": 14, "flood": 78, "flash_flood": 56, "seismic_zone": 4, "earthquake": 58,
+      "cloudburst": 22, "extreme_rainfall": 61, "accessibility": 92, "drainage": 48, "soil": "Alluvial sand-silt"
+    },
+    {
+      "name": "Rishikesh", "state": "Uttarakhand", "lat": 30.1033, "lon": 78.2948,
+      "elevation_m": 372, "avg_slope_deg": 9, "terrain": "Foothill / river bank",
+      "landslide": 33, "flood": 74, "flash_flood": 66, "seismic_zone": 4, "earthquake": 60,
+      "cloudburst": 31, "extreme_rainfall": 64, "accessibility": 86, "drainage": 51, "soil": "River-borne sand and boulders"
+    },
+    {
+      "name": "Chamoli", "state": "Uttarakhand", "lat": 30.4100, "lon": 79.3200,
+      "elevation_m": 1850, "avg_slope_deg": 34, "terrain": "High mountain",
+      "landslide": 88, "flood": 47, "flash_flood": 84, "seismic_zone": 5, "earthquake": 81,
+      "cloudburst": 76, "extreme_rainfall": 72, "accessibility": 34, "drainage": 44, "soil": "Thin colluvium over rock"
+    },
+    {
+      "name": "Rudraprayag", "state": "Uttarakhand", "lat": 30.2840, "lon": 78.9810,
+      "elevation_m": 1420, "avg_slope_deg": 31, "terrain": "Mountain / river confluence",
+      "landslide": 84, "flood": 58, "flash_flood": 82, "seismic_zone": 5, "earthquake": 78,
+      "cloudburst": 71, "extreme_rainfall": 70, "accessibility": 41, "drainage": 42, "soil": "Weathered rock and debris"
+    },
+    {
+      "name": "Uttarkashi", "state": "Uttarakhand", "lat": 30.7300, "lon": 78.4400,
+      "elevation_m": 1680, "avg_slope_deg": 36, "terrain": "High mountain",
+      "landslide": 86, "flood": 51, "flash_flood": 80, "seismic_zone": 5, "earthquake": 83,
+      "cloudburst": 74, "extreme_rainfall": 69, "accessibility": 36, "drainage": 40, "soil": "Rocky with shear zones"
+    },
+    {
+      "name": "Pauri Garhwal", "state": "Uttarakhand", "lat": 30.1469, "lon": 78.7803,
+      "elevation_m": 1650, "avg_slope_deg": 28, "terrain": "Mid mountain",
+      "landslide": 72, "flood": 38, "flash_flood": 61, "seismic_zone": 4, "earthquake": 70,
+      "cloudburst": 58, "extreme_rainfall": 60, "accessibility": 52, "drainage": 47, "soil": "Silty soil over rock"
+    },
+    {
+      "name": "Tehri Garhwal", "state": "Uttarakhand", "lat": 30.3900, "lon": 78.4800,
+      "elevation_m": 1550, "avg_slope_deg": 30, "terrain": "Mid mountain / reservoir",
+      "landslide": 76, "flood": 44, "flash_flood": 64, "seismic_zone": 4, "earthquake": 73,
+      "cloudburst": 61, "extreme_rainfall": 62, "accessibility": 49, "drainage": 45, "soil": "Weathered phyllite"
+    },
+    {
+      "name": "Nainital", "state": "Uttarakhand", "lat": 29.3919, "lon": 79.4542,
+      "elevation_m": 2084, "avg_slope_deg": 29, "terrain": "Mountain / lake basin",
+      "landslide": 79, "flood": 41, "flash_flood": 58, "seismic_zone": 4, "earthquake": 68,
+      "cloudburst": 63, "extreme_rainfall": 66, "accessibility": 58, "drainage": 43, "soil": "Debris and boulder mix"
+    },
+    {
+      "name": "Almora", "state": "Uttarakhand", "lat": 29.5892, "lon": 79.6467,
+      "elevation_m": 1640, "avg_slope_deg": 26, "terrain": "Mid mountain ridge",
+      "landslide": 68, "flood": 32, "flash_flood": 52, "seismic_zone": 4, "earthquake": 66,
+      "cloudburst": 54, "extreme_rainfall": 57, "accessibility": 56, "drainage": 50, "soil": "Sandy loam over gneiss"
+    },
+    {
+      "name": "Pithoragarh", "state": "Uttarakhand", "lat": 29.5829, "lon": 80.2182,
+      "elevation_m": 1514, "avg_slope_deg": 33, "terrain": "High mountain / border belt",
+      "landslide": 83, "flood": 46, "flash_flood": 77, "seismic_zone": 5, "earthquake": 80,
+      "cloudburst": 69, "extreme_rainfall": 67, "accessibility": 33, "drainage": 41, "soil": "Colluvial debris"
+    },
+    {
+      "name": "Bageshwar", "state": "Uttarakhand", "lat": 29.8370, "lon": 79.7710,
+      "elevation_m": 1004, "avg_slope_deg": 30, "terrain": "Mountain / river valley",
+      "landslide": 77, "flood": 49, "flash_flood": 72, "seismic_zone": 5, "earthquake": 74,
+      "cloudburst": 64, "extreme_rainfall": 65, "accessibility": 44, "drainage": 44, "soil": "Boulder-rich valley fill"
+    },
+    {
+      "name": "Patna", "state": "Bihar", "lat": 25.5941, "lon": 85.1376,
+      "elevation_m": 53, "avg_slope_deg": 2, "terrain": "Ganga plain",
+      "landslide": 6, "flood": 82, "flash_flood": 44, "seismic_zone": 4, "earthquake": 61,
+      "cloudburst": 18, "extreme_rainfall": 59, "accessibility": 90, "drainage": 38, "soil": "Soft alluvial clay"
+    },
+    {
+      "name": "Nagpur", "state": "Maharashtra", "lat": 21.1458, "lon": 79.0882,
+      "elevation_m": 310, "avg_slope_deg": 3, "terrain": "Plateau",
+      "landslide": 9, "flood": 34, "flash_flood": 26, "seismic_zone": 2, "earthquake": 28,
+      "cloudburst": 15, "extreme_rainfall": 41, "accessibility": 94, "drainage": 66, "soil": "Black cotton soil"
+    },
+    {
+      "name": "Kamrup", "state": "Assam", "lat": 26.1445, "lon": 91.7362,
+      "elevation_m": 55, "avg_slope_deg": 5, "terrain": "Brahmaputra floodplain",
+      "landslide": 24, "flood": 89, "flash_flood": 68, "seismic_zone": 5, "earthquake": 84,
+      "cloudburst": 34, "extreme_rainfall": 78, "accessibility": 80, "drainage": 33, "soil": "Saturated silty clay"
+    },
+    {
+      "name": "Jaipur", "state": "Rajasthan", "lat": 26.9124, "lon": 75.7873,
+      "elevation_m": 431, "avg_slope_deg": 4, "terrain": "Semi-arid plain",
+      "landslide": 8, "flood": 22, "flash_flood": 19, "seismic_zone": 2, "earthquake": 26,
+      "cloudburst": 12, "extreme_rainfall": 29, "accessibility": 93, "drainage": 71, "soil": "Sandy soil"
+    },
+    {
+      "name": "Coimbatore", "state": "Tamil Nadu", "lat": 11.0168, "lon": 76.9558,
+      "elevation_m": 411, "avg_slope_deg": 6, "terrain": "Plain / hill fringe",
+      "landslide": 21, "flood": 39, "flash_flood": 31, "seismic_zone": 3, "earthquake": 38,
+      "cloudburst": 19, "extreme_rainfall": 44, "accessibility": 91, "drainage": 64, "soil": "Red loam"
+    },
+    {
+      "name": "Khordha", "state": "Odisha", "lat": 20.2961, "lon": 85.8245,
+      "elevation_m": 45, "avg_slope_deg": 4, "terrain": "Coastal plain",
+      "landslide": 11, "flood": 76, "flash_flood": 52, "seismic_zone": 3, "earthquake": 36,
+      "cloudburst": 26, "extreme_rainfall": 72, "accessibility": 88, "drainage": 40, "soil": "Coastal sandy clay"
+    },
+    {
+      "name": "Srinagar", "state": "Jammu and Kashmir", "lat": 34.0837, "lon": 74.7973,
+      "elevation_m": 1585, "avg_slope_deg": 12, "terrain": "Valley basin",
+      "landslide": 41, "flood": 71, "flash_flood": 58, "seismic_zone": 5, "earthquake": 82,
+      "cloudburst": 38, "extreme_rainfall": 54, "accessibility": 74, "drainage": 42, "soil": "Lacustrine silt (Karewa)"
+    }
+  ],
+  "land_history": {
+    "_default": {
+      "previous_use": "Mixed agricultural land with scattered private holdings",
+      "acquisition_history": "First notified under Section 11 of RFCTLARR Act, 2013",
+      "documentation_status": "Partially digitised; mutation entries pending for several khasra numbers",
+      "previous_disputes": "2 civil suits on compensation valuation (sample data)",
+      "land_conversion": "Agricultural to public infrastructure use, conversion order partially issued",
+      "timeline": [
+        {"year": "2018", "event": "Land recorded as irrigated agricultural holdings and grazing commons"},
+        {"year": "2020", "event": "Alignment survey completed, acquisition proposed"},
+        {"year": "2022", "event": "Preliminary notification published, objections invited"},
+        {"year": "2023", "event": "Award declared, compensation disbursement begins"},
+        {"year": "2024", "event": "Civil suit filed on valuation, possession partially stalled"},
+        {"year": "2025", "event": "Possession taken over cleared stretches, balance under litigation"}
+      ]
+    }
+  }
+}

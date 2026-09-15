@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block page_title %}Alerts{% endblock %}
+
+{% block content %}
+<div class="grid grid-4">
+  <div class="kpi accent-critical">
+    <div class="kpi-label">Critical alerts</div>
+    <div class="kpi-value">{{ alerts | selectattr('severity', 'equalto', 'CRITICAL') | list | length }}</div>
+    <div class="kpi-sub">delay probability 75% and above</div>
+  </div>
+  <div class="kpi accent-high">
+    <div class="kpi-label">High alerts</div>
+    <div class="kpi-value">{{ alerts | selectattr('severity', 'equalto', 'HIGH') | list | length }}</div>
+    <div class="kpi-sub">delay probability 55-74%</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Total open alerts</div>
+    <div class="kpi-value">{{ alerts | length }}</div>
+    <div class="kpi-sub">generated from sample data</div>
+  </div>
+  <div class="kpi accent-blue">
+    <div class="kpi-label">Alert rule</div>
+    <div class="kpi-value" style="font-size:18px;">Delay &ge; 55%</div>
+    <div class="kpi-sub">plus hazard exposure flags</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2>Open alerts</h2>
+    <span class="hint">sorted by delay probability</span>
+  </div>
+  <div class="pill-row" style="margin-bottom:14px;">
+    <button type="button" class="pill active" data-sev="">All</button>
+    <button type="button" class="pill" data-sev="CRITICAL">Critical only</button>
+    <button type="button" class="pill" data-sev="HIGH">High only</button>
+  </div>
+
+  {% for alert in alerts %}
+  <div class="alert-card {{ alert.severity }}" data-sev="{{ alert.severity }}">
+    <div class="alert-top">
+      <span class="badge {{ alert.severity }}">{{ alert.severity }} ALERT</span>
+      <strong>{{ alert.project }}</strong>
+      <span class="faint">{{ alert.project_id }}</span>
+    </div>
+    <div class="alert-grid">
+      <div>
+        <div class="label">Location</div>
+        <div>{{ alert.location }}</div>
+      </div>
+      <div>
+        <div class="label">Delay probability</div>
+        <div class="num" style="font-weight:700;">{{ alert.delay_probability }}%</div>
+      </div>
+      <div>
+        <div class="label">Issue</div>
+        <div>{{ alert.issue }}</div>
+      </div>
+      <div>
+        <div class="label">Recommended</div>
+        <div>{{ alert.recommended }}</div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  {% if not alerts %}
+    <p class="muted">No project in the sample data crosses the alert threshold.</p>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$$(".pill[data-sev]").forEach(function (pill) {
+  pill.addEventListener("click", function () {
+    $$(".pill[data-sev]").forEach(function (other) { other.classList.remove("active"); });
+    pill.classList.add("active");
+    const wanted = pill.dataset.sev;
+    $$(".alert-card").forEach(function (card) {
+      card.classList.toggle("hidden", wanted && card.dataset.sev !== wanted);
+    });
+  });
+});
+</script>
+{% endblock %}

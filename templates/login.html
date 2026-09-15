@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in &middot; {{ app_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="login-page">
+
+  <section class="login-visual">
+    <!-- Contour lines: the visual idea of reading a landscape before building on it -->
+    <svg class="contours" viewBox="0 0 600 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <g fill="none" stroke="#1f3b47" stroke-width="1.4">
+        <path d="M-40 560 C120 470 180 520 300 420 S470 340 640 300"/>
+        <path d="M-40 610 C130 520 200 570 320 470 S490 390 640 350"/>
+        <path d="M-40 660 C140 570 220 620 340 520 S510 440 640 400"/>
+        <path d="M-40 510 C110 420 160 470 280 370 S450 290 640 250"/>
+        <path d="M-40 460 C100 370 140 420 260 320 S430 240 640 200"/>
+      </g>
+      <g fill="none" stroke="#35d0ba" stroke-width="1.6" opacity=".55">
+        <path d="M-40 410 C90 320 120 370 240 270 S410 190 640 150"/>
+      </g>
+    </svg>
+
+    <div class="inner">
+      <div class="brand-row" style="margin-bottom:22px;">
+        <svg class="brand-mark" viewBox="0 0 34 34" aria-hidden="true">
+          <path d="M3 26c4-7 9-3 13-8s4-12 10-13" fill="none" stroke="#35d0ba" stroke-width="2" stroke-linecap="round"/>
+          <path d="M5 31c5-6 11-4 14-10s5-10 11-11" fill="none" stroke="#4c9aff" stroke-width="1.6" stroke-linecap="round" opacity=".75"/>
+          <circle cx="21" cy="13" r="2.6" fill="#35d0ba"/>
+        </svg>
+        <div class="brand-name" style="font-size:19px;">{{ app_name }}</div>
+      </div>
+
+      <h1>Know the land before you build.</h1>
+      <p class="lede">
+        Land acquisition delay, terrain difficulty, disaster exposure and preliminary
+        geotechnical screening for a site, in one place, before money is committed.
+      </p>
+      <ul>
+        <li>Predict acquisition delay and see which factor is driving it</li>
+        <li>Screen a proposed site for terrain, landslide, flood and seismic exposure</li>
+        <li>Compare three candidate locations side by side</li>
+        <li>Get an action list your team can work through this week</li>
+      </ul>
+      <p class="faint" style="margin-top:20px;">
+        SIH 2026 prototype. Built on synthetic and sample data; not a certified engineering system.
+      </p>
+    </div>
+  </section>
+
+  <section class="login-form-side">
+    <div class="login-box">
+      <h2>Sign in</h2>
+      <p class="faint" style="margin-bottom:18px;">Local prototype authentication. No data leaves your machine.</p>
+
+      {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+
+      <form method="post">
+        <div style="margin-bottom:12px;">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" value="admin" autocomplete="username" required>
+        </div>
+        <div>
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" value="admin123" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn">Sign in</button>
+      </form>
+
+      <div class="demo-creds">
+        <div style="margin-bottom:8px;">Demo accounts</div>
+        <table>
+          <tbody>
+          {% for username, account in demo_users.items() %}
+            <tr>
+              <td>{{ username }}</td>
+              <td>{{ account.password }}</td>
+              <td class="muted">{{ account.role }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</div>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block page_title %}GIS risk map{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-head">
+    <h2>Project risk map</h2>
+    <span class="hint">OpenStreetMap base layer, no paid API key needed</span>
+  </div>
+
+  <div class="btn-row" style="margin-top:0;margin-bottom:12px;">
+    <div class="pill-row" id="filterPills">
+      <button type="button" class="pill active" data-level="">All projects</button>
+      <button type="button" class="pill" data-level="CRITICAL">Critical</button>
+      <button type="button" class="pill" data-level="HIGH">High</button>
+      <button type="button" class="pill" data-level="MEDIUM">Medium</button>
+      <button type="button" class="pill" data-level="LOW">Low</button>
+    </div>
+    <button type="button" class="btn btn-ghost" id="zoomUk">Zoom to Uttarakhand</button>
+    <button type="button" class="btn btn-ghost" id="zoomIndia">Zoom to India</button>
+  </div>
+
+  <div id="riskMap"></div>
+
+  <div class="legend" style="margin-top:12px;">
+    <span><i style="background:#3fbf8f"></i> Low</span>
+    <span><i style="background:#e0a83c"></i> Medium</span>
+    <span><i style="background:#f1735c"></i> High</span>
+    <span><i style="background:#e4485d"></i> Critical</span>
+    <span class="faint">Marker size scales with land area. Click a marker for project detail.</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Mapped projects</h2><span class="hint" id="countHint"></span></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Project</th><th>District</th><th>Risk</th><th class="num">Delay</th><th class="num">Land (ha)</th><th class="wrap">Main risk factor</th></tr></thead>
+      <tbody id="mapRows"></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const INDIA_VIEW = [[8, 68], [35, 97]];
+const UK_VIEW = [[28.7, 77.5], [31.5, 81.1]];
+
+const map = L.map("riskMap").fitBounds(INDIA_VIEW);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 18,
+  attribution: '&copy; OpenStreetMap contributors',
+}).addTo(map);
+
+let markerLayer = L.layerGroup().addTo(map);
+let projects = [];
+
+getJSON("/api/map-projects").then(function (data) {
+  projects = data;
+  draw("");
+});
+
+function draw(level) {
+  markerLayer.clearLayers();
+  const rows = level ? projects.filter(function (p) { return p.risk_level === level; }) : projects;
+
+  rows.forEach(function (p) {
+    const marker = L.circleMarker([p.lat, p.lon], {
+      radius: 7 + Math.min(9, p.land_area / 40),
+      color: RISK_COLORS[p.risk_level],
+      fillColor: RISK_COLORS[p.risk_level],
+      fillOpacity: 0.6,
+      weight: 2,
+    });
+
+    marker.bindPopup(`
+      <div class="popup">
+        <h4>${escapeHtml(p.project_name)}</h4>
+        <div><strong>${escapeHtml(p.district)}, ${escapeHtml(p.state)}</strong></div>
+        <div>Type: ${escapeHtml(p.project_type)}</div>
+        <div>Risk: <span class="badge ${p.risk_level}">${p.risk_level}</span></div>
+        <div>Delay probability: ${p.delay_probability}%</div>
+        <div>Land area: ${p.land_area} ha</div>
+        <div>Affected families: ${p.affected_families}</div>
+        <div>Main risk factor: ${escapeHtml(p.main_risk_factor)}</div>
+      </div>`);
+
+    marker.addTo(markerLayer);
+  });
+
+  $("#countHint").textContent = rows.length + " of " + projects.length + " projects shown";
+  $("#mapRows").innerHTML = rows.map(function (p) {
+    return `<tr>
+      <td class="wrap">${escapeHtml(p.project_name)}</td>
+      <td>${escapeHtml(p.district)}</td>
+      <td>${badge(p.risk_level)}</td>
+      <td class="num">${p.delay_probability}%</td>
+      <td class="num">${p.land_area}</td>
+      <td class="wrap">${escapeHtml(p.main_risk_factor)}</td>
+    </tr>`;
+  }).join("");
+}
+
+$$("#filterPills .pill").forEach(function (pill) {
+  pill.addEventListener("click", function () {
+    $$("#filterPills .pill").forEach(function (other) { other.classList.remove("active"); });
+    pill.classList.add("active");
+    draw(pill.dataset.level);
+  });
+});
+
+$("#zoomUk").addEventListener("click", function () { map.fitBounds(UK_VIEW); });
+$("#zoomIndia").addEventListener("click", function () { map.fitBounds(INDIA_VIEW); });
+</script>
+{% endblock %}

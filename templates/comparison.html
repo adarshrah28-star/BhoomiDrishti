@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block page_title %}Site comparison{% endblock %}
+
+{% block content %}
+<div class="notice info">
+  Compare three candidate locations for the same project on identical criteria. The platform
+  names the best-scoring option as a preliminary preference only.
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Candidate sites</h2><span class="hint">same project type and size for all three</span></div>
+  <form id="compareForm">
+    <div class="form-grid">
+      <div>
+        <label for="siteA">Site A</label>
+        <select id="siteA">{% for d in districts %}<option {% if d=='Chamoli' %}selected{% endif %}>{{ d }}</option>{% endfor %}</select>
+      </div>
+      <div>
+        <label for="siteB">Site B</label>
+        <select id="siteB">{% for d in districts %}<option {% if d=='Nainital' %}selected{% endif %}>{{ d }}</option>{% endfor %}</select>
+      </div>
+      <div>
+        <label for="siteC">Site C</label>
+        <select id="siteC">{% for d in districts %}<option {% if d=='Dehradun' %}selected{% endif %}>{{ d }}</option>{% endfor %}</select>
+      </div>
+      <div>
+        <label for="project_type">Project type</label>
+        <select id="project_type">{% for t in project_types %}<option {% if t=='Highway' %}selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+      </div>
+      <div>
+        <label for="land_area">Land area (ha)</label>
+        <input type="number" id="land_area" value="110" min="1" max="2000" step="0.1">
+      </div>
+      <div>
+        <label for="affected_families">Affected families</label>
+        <input type="number" id="affected_families" value="280" min="0" max="5000">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button type="submit" class="btn" data-i18n="label.compare">Compare sites</button>
+      <span id="status" class="faint"></span>
+    </div>
+  </form>
+</div>
+
+<div id="out" class="hidden">
+  <div class="card" id="winnerCard">
+    <div class="card-head"><h2>Recommended preliminary site</h2></div>
+    <div class="score-hero">
+      <div class="score-dial">
+        <canvas id="winnerDial"></canvas>
+        <div class="score-text">
+          <div class="score-num" id="winnerScore">-</div>
+          <div class="score-den">of 100</div>
+        </div>
+      </div>
+      <div>
+        <div id="winnerName" style="font-size:22px;font-weight:700;"></div>
+        <p class="muted" id="winnerWhy" style="max-width:52ch;"></p>
+        <p class="faint" id="caveat"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Parameter comparison</h2><span class="hint">lower risk is better; best value in each row highlighted</span></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr id="headRow"></tr></thead>
+        <tbody id="bodyRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-head"><h2>Risk profile overlay</h2></div>
+      <div class="chart-box"><canvas id="radarChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Overall suitability</h2></div>
+      <div class="chart-box"><canvas id="scoreChart"></canvas></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const compareForm = $("#compareForm");
+
+compareForm.addEventListener("submit", async function (event) {
+  event.preventDefault();
+  $("#status").innerHTML = '<span class="spinner"></span> scoring three sites';
+  const data = await postJSON("/api/compare", {
+    sites: [$("#siteA").value, $("#siteB").value, $("#siteC").value],
+    project_type: $("#project_type").value,
+    land_area: $("#land_area").value,
+    affected_families: $("#affected_families").value,
+  });
+  render(data);
+  $("#status").textContent = "";
+});
+
+function render(data) {
+  $("#out").classList.remove("hidden");
+  const sites = data.sites;
+
+  /* Winner card */
+  const best = data.recommended;
+  $("#winnerScore").textContent = best.suitability;
+  scoreDial("winnerDial", best.suitability, TEAL);
+  $("#winnerName").innerHTML = best.label + ": " + escapeHtml(best.district)
+    + ' <span class="faint" style="font-weight:400">' + escapeHtml(best.state) + "</span>";
+  $("#winnerWhy").textContent = best.why;
+  $("#caveat").textContent = data.caveat;
+
+  /* Comparison table */
+  $("#headRow").innerHTML = "<th>Parameter</th>" + sites.map(function (site) {
+    return `<th>${site.label}: ${escapeHtml(site.district)}</th>`;
+  }).join("");
+
+  const rows = data.parameters.map(function (parameter) {
+    const values = sites.map(function (site) {
+      return site.rows.find(function (r) { return r.name === parameter; }).value;
+    });
+    const bestValue = Math.min.apply(null, values);
+    const cells = values.map(function (value) {
+      const isBest = value === bestValue;
+      return `<td class="num">
+        <span style="${isBest ? "color:" + RISK_COLORS.LOW + ";font-weight:700" : ""}">${value}</span>
+        ${badge(band(value))}
+      </td>`;
+    }).join("");
+    return `<tr><td class="wrap">${escapeHtml(parameter)}</td>${cells}</tr>`;
+  });
+
+  const scoreValues = sites.map(function (site) { return site.suitability; });
+  const bestScore = Math.max.apply(null, scoreValues);
+  rows.push("<tr><td class='wrap'><strong>Overall suitability score</strong></td>"
+    + sites.map(function (site) {
+        const isBest = site.suitability === bestScore;
+        return `<td class="num"><strong style="${isBest ? "color:" + TEAL : ""}">${site.suitability}/100</strong></td>`;
+      }).join("") + "</tr>");
+
+  $("#bodyRows").innerHTML = rows.join("");
+
+  /* Radar overlay */
+  const palette = [RISK_COLORS.CRITICAL, RISK_COLORS.MEDIUM, TEAL];
+  drawChart("radarChart", {
+    type: "radar",
+    data: {
+      labels: data.parameters.map(function (p) { return p.replace(" risk", ""); }),
+      datasets: sites.map(function (site, index) {
+        return {
+          label: site.label + ": " + site.district,
+          data: data.parameters.map(function (p) {
+            return site.rows.find(function (r) { return r.name === p; }).value;
+          }),
+          borderColor: palette[index],
+          backgroundColor: "transparent",
+          pointBackgroundColor: palette[index],
+        };
+      }),
+    },
+    options: {
+      scales: { r: { min: 0, max: 100, grid: { color: GRID }, angleLines: { color: GRID },
+                     pointLabels: { color: TEXT_DIM, font: { size: 10.5 } },
+                     ticks: { backdropColor: "transparent", color: "#6d8792", stepSize: 25 } } },
+    },
+  });
+
+  drawChart("scoreChart", {
+    type: "bar",
+    data: {
+      labels: sites.map(function (site) { return site.label + ": " + site.district; }),
+      datasets: [{
+        label: "Suitability score (higher is better)",
+        data: scoreValues,
+        backgroundColor: sites.map(function (site) {
+          return site.suitability === bestScore ? TEAL : "rgba(76,154,255,.5)";
+        }),
+        borderRadius: 3,
+      }],
+    },
+    options: { plugins: { legend: { display: false } }, scales: axes(100) },
+  });
+}
+</script>
+{% endblock %}

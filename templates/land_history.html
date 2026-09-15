@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block page_title %}Land history{% endblock %}
+
+{% block content %}
+<div class="notice">
+  <strong>Sample records.</strong> The history below is illustrative prototype content. A
+  production build would read khasra-level entries from the state revenue system.
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Select a project parcel</h2></div>
+  <div class="form-grid">
+    <div>
+      <label for="projectSelect">Project</label>
+      <select id="projectSelect">
+        {% for project in projects %}
+          <option value="{{ project.project_id }}">{{ project.project_name }} &mdash; {{ project.district }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Record summary</h2><span class="hint" id="parcelMeta"></span></div>
+    <div id="recordRows"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Acquisition timeline</h2></div>
+    <div class="timeline">
+      {% for item in history.timeline %}
+        <div class="timeline-item">
+          <div class="timeline-year">{{ item.year }}</div>
+          <div class="muted">{{ item.event }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Documentation and dispute status</h2></div>
+    <div id="statusRows"></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Historical project activity on this land</h2></div>
+    <div class="chart-box short"><canvas id="activityChart"></canvas></div>
+    <p class="faint">Illustrative progress of acquisition activity over the last six years.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Recorded land characteristics</h2></div>
+  <div class="grid grid-2">
+    <div>
+      <h3>Previous land use</h3>
+      <p class="muted">{{ history.previous_use }}</p>
+      <h3>Acquisition history</h3>
+      <p class="muted">{{ history.acquisition_history }}</p>
+    </div>
+    <div>
+      <h3>Ownership and documentation</h3>
+      <p class="muted">{{ history.documentation_status }}</p>
+      <h3>Land conversion</h3>
+      <p class="muted">{{ history.land_conversion }}</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const PROJECTS = {{ projects|tojson }};
+
+function load(projectId) {
+  const p = PROJECTS.find(function (item) { return item.project_id === projectId; });
+  if (!p) return;
+
+  $("#parcelMeta").textContent = p.district + ", " + p.state + " \u00b7 " + p.project_type;
+  $("#recordRows").innerHTML =
+    `<div class="metric-row"><div class="metric-name">Land area recorded</div><div class="metric-value">${p.land_area} ha</div><div></div></div>
+     <div class="metric-row"><div class="metric-name">Affected families</div><div class="metric-value">${p.affected_families}</div><div></div></div>
+     <div class="metric-row"><div class="metric-name">Active disputes</div><div class="metric-value">${p.legal_disputes}</div><div>${badge(p.legal_disputes >= 6 ? "CRITICAL" : p.legal_disputes >= 3 ? "HIGH" : "LOW")}</div></div>
+     <div class="metric-row"><div class="metric-name">Current stage</div><div class="metric-value" style="grid-column:span 2;text-align:left;">${escapeHtml(p.stage)}</div></div>`;
+
+  $("#statusRows").innerHTML =
+    metricRow("Documentation completion", p.documentation_completion, "%")
+    + metricRow("Possession acquired", p.possession_acquired, "%")
+    + metricRow("Compensation pending", p.compensation_pending, "%")
+    + metricRow("R&R progress", p.rr_progress, "%")
+    + metricRow("Stakeholder responsiveness", p.stakeholder_responsiveness, "%");
+
+  /* Illustrative back-cast of how possession built up over time. */
+  const now = p.possession_acquired;
+  const series = [0, Math.round(now * 0.1), Math.round(now * 0.25),
+                  Math.round(now * 0.5), Math.round(now * 0.8), now];
+  drawChart("activityChart", {
+    type: "line",
+    data: {
+      labels: ["2020", "2021", "2022", "2023", "2024", "2025"],
+      datasets: [{
+        label: "Possession acquired (%)",
+        data: series, borderColor: TEAL, backgroundColor: "rgba(53,208,186,.15)",
+        fill: true, tension: 0.3,
+      }],
+    },
+    options: { scales: axes(100) },
+  });
+}
+
+$("#projectSelect").addEventListener("change", function (event) { load(event.target.value); });
+load(PROJECTS[0].project_id);
+</script>
+{% endblock %}

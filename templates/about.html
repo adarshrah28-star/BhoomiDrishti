@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block page_title %}About BhoomiDrishti{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>What this platform does</h2></div>
+    <p class="muted">
+      BhoomiDrishti is a decision-support prototype for the period before land is acquired and
+      before construction starts. It brings acquisition status, terrain, hazard exposure and
+      preliminary geotechnical indicators into one view, then produces a delay probability, a
+      site suitability score, the factors driving them, and an action list.
+    </p>
+    <p class="muted">
+      The point is not to replace engineering judgement. It is to tell a planner which of forty
+      projects needs attention this month, and which of three candidate sites deserves the
+      survey budget.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>What it does not do</h2></div>
+    <ul class="muted">
+      <li>It cannot determine pile depth, foundation depth, bearing capacity, reinforcement or structural design</li>
+      <li>It does not forecast that a landslide or flood will occur on a given date</li>
+      <li>It does not claim real-world accuracy: the model is trained on synthetic data</li>
+      <li>It is not integrated with any government system, and displays no official seals or logos</li>
+      <li>It is not a substitute for statutory clearance, survey or certified investigation</li>
+    </ul>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Model</h2></div>
+    <div class="metric-row"><div class="metric-name">Algorithm</div><div class="metric-value" style="grid-column:span 2;text-align:left;">Random Forest regressor, scikit-learn</div></div>
+    <div class="metric-row"><div class="metric-name">Training rows</div><div class="metric-value" style="grid-column:span 2;text-align:left;">{{ metrics.rows_trained }} synthetic</div></div>
+    <div class="metric-row"><div class="metric-name">Held-out mean absolute error</div><div class="metric-value" style="grid-column:span 2;text-align:left;">{{ metrics.mae }} points</div></div>
+    <div class="metric-row"><div class="metric-name">Held-out R-squared</div><div class="metric-value" style="grid-column:span 2;text-align:left;">{{ metrics.r2 }}</div></div>
+    <div class="metric-row"><div class="metric-name">Data source</div><div class="metric-value" style="grid-column:span 2;text-align:left;">{{ metrics.data_source }}</div></div>
+    <p class="faint" style="margin-top:12px;">
+      These statistics describe how well the model recovered the synthetic generator's own
+      pattern. They say nothing about performance on real projects, and should never be presented
+      as accuracy.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>How a prediction is explained</h2></div>
+    <p class="muted">
+      For each input, the prediction is re-run with only that field reset to a healthy baseline.
+      The drop in predicted risk is that field's contribution for this specific project, and the
+      contributions are normalised to percentages.
+    </p>
+    <p class="muted">
+      This is a form of ablation attribution. It is simpler than SHAP, it needs no extra
+      dependency, and it is local rather than global, so two projects with the same risk score
+      can have entirely different explanations.
+    </p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Architecture</h2></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Layer</th><th>Technology</th><th class="wrap">Files</th></tr></thead>
+      <tbody>
+        <tr><td>Backend</td><td>Python, Flask</td><td class="wrap">app.py</td></tr>
+        <tr><td>Machine learning</td><td>scikit-learn, pandas, NumPy</td><td class="wrap">model/risk_model.py</td></tr>
+        <tr><td>Rule engine</td><td>Plain Python</td><td class="wrap">model/rules.py</td></tr>
+        <tr><td>Frontend</td><td>HTML, CSS, vanilla JavaScript</td><td class="wrap">templates/, static/</td></tr>
+        <tr><td>Charts</td><td>Chart.js</td><td class="wrap">static/js/app.js</td></tr>
+        <tr><td>Maps</td><td>Leaflet with OpenStreetMap tiles</td><td class="wrap">templates/map.html</td></tr>
+        <tr><td>Data</td><td>CSV and JSON sample files</td><td class="wrap">data/</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="faint" style="margin-top:12px;">
+    No paid API, database or hosting service is required. Chart.js and Leaflet load from a public
+    CDN, so those two pages need an internet connection; everything else runs offline.
+  </p>
+</div>
+{% endblock %}

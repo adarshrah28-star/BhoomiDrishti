@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block page_title %}BhoomiAI assistant{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head">
+      <h2>BhoomiAI</h2>
+      <span class="hint">rule-based, runs fully offline</span>
+    </div>
+
+    <div class="chat-window" id="chatWindow">
+      <div class="msg bot">
+        I answer questions about land acquisition delay, terrain and slope, landslide and flood
+        screening, geotechnical screening and what to check before construction. Ask me anything,
+        or use one of the suggested questions.
+      </div>
+    </div>
+
+    <form class="chat-form" id="chatForm">
+      <input type="text" id="question" placeholder="Ask about land acquisition, terrain or risk" autocomplete="off" required>
+      <button type="submit" class="btn">Send</button>
+    </form>
+    <p class="faint" style="margin-top:10px;">
+      Answers follow the language selected in the top bar. BhoomiAI gives screening-level
+      guidance only, never engineering approval.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Suggested questions</h2></div>
+    <div id="suggestions"></div>
+
+    <div class="card-head" style="margin-top:22px;"><h2>How this works</h2></div>
+    <p class="muted">
+      Each question is matched against a local knowledge base in <code>model/rules.py</code>.
+      Nothing is sent to an external service, so the assistant works with no internet connection
+      and no API key.
+    </p>
+    <p class="muted">
+      To connect a real language model later, replace the body of
+      <code>answer_question()</code> with your API call and keep this keyword matcher as the
+      offline fallback. The rest of the application only ever calls that one function.
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const SUGGESTIONS = [
+  "Why is this project high risk?",
+  "What are the major causes of land acquisition delay?",
+  "What should I check before building a road in Uttarakhand?",
+  "What does high landslide risk mean?",
+  "Can AI determine pile depth?",
+  "How does geotechnical screening work here?",
+  "What data is the model trained on?",
+  "How do I compare three candidate sites?",
+];
+
+$("#suggestions").innerHTML = SUGGESTIONS.map(function (text) {
+  return `<button type="button" class="pill" style="margin:0 6px 8px 0" data-q="${escapeHtml(text)}">${escapeHtml(text)}</button>`;
+}).join("");
+
+$$("#suggestions .pill").forEach(function (pill) {
+  pill.addEventListener("click", function () { ask(pill.dataset.q); });
+});
+
+$("#chatForm").addEventListener("submit", function (event) {
+  event.preventDefault();
+  const text = $("#question").value.trim();
+  if (text) ask(text);
+  $("#question").value = "";
+});
+
+function bubble(role, text) {
+  const div = document.createElement("div");
+  div.className = "msg " + role;
+  div.textContent = text;
+  $("#chatWindow").appendChild(div);
+  $("#chatWindow").scrollTop = $("#chatWindow").scrollHeight;
+  return div;
+}
+
+async function ask(question) {
+  bubble("user", question);
+  const thinking = bubble("bot", "...");
+  try {
+    const data = await postJSON("/api/chat", { question: question, language: currentLanguage() });
+    thinking.textContent = data.answer;
+  } catch (error) {
+    thinking.textContent = "The assistant could not be reached. Check that the Flask server is still running.";
+  }
+}
+</script>
+{% endblock %}

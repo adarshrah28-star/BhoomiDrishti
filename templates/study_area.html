@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block page_title %}Study area: Uttarakhand{% endblock %}
+
+{% block content %}
+<div class="notice">
+  <strong>Prototype sample data.</strong>
+  District values below are illustrative figures compiled for this demonstration. In production
+  they would be replaced by DEM-derived slope, GSI landslide susceptibility, CWC flood records
+  and BIS seismic zoning.
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2>Why Uttarakhand</h2>
+    <span class="hint">pick a district to load its profile</span>
+  </div>
+  <p class="muted" style="max-width:82ch;">
+    Most of the state sits on steep Himalayan slopes in seismic zones IV and V, with narrow
+    valley floors, monsoon cloudbursts and long stretches of single all-weather access. Land is
+    fragmented into small private holdings, so an alignment change of a few hundred metres can
+    alter both the number of affected families and the slope stability picture. That combination
+    is exactly what a pre-construction screening tool has to weigh.
+  </p>
+  <div class="pill-row" id="districtPills">
+    {% for district in uk_districts %}
+      <button type="button" class="pill {% if loop.first %}active{% endif %}" data-name="{{ district }}">{{ district }}</button>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="grid grid-3">
+  <div class="card">
+    <div class="card-head"><h3 id="districtName">District</h3><span class="hint" id="districtTerrain"></span></div>
+    <div id="profileRows"></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h3>Hazard exposure</h3></div>
+    <div class="chart-box short"><canvas id="hazardChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h3>Terrain and access</h3></div>
+    <div id="terrainRows"></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>District comparison</h2><span class="hint">composite hazard score across the state</span></div>
+  <div class="chart-box"><canvas id="compareChart"></canvas></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const UK = {{ uk_districts|tojson }};
+
+async function load(name) {
+  const data = await getJSON("/api/district/" + encodeURIComponent(name));
+  const d = data.district, t = data.terrain, h = data.hazards;
+
+  $("#districtName").textContent = d.name;
+  $("#districtTerrain").textContent = d.terrain + " \u00b7 seismic zone " + d.seismic_zone;
+
+  $("#profileRows").innerHTML =
+    `<div class="metric-row"><div class="metric-name">Elevation</div><div class="metric-value">${d.elevation_m} m</div><div></div></div>
+     <div class="metric-row"><div class="metric-name">Average slope</div><div class="metric-value">${d.avg_slope_deg}&deg;</div><div></div></div>
+     <div class="metric-row"><div class="metric-name">Indicative soil</div><div class="metric-value" style="grid-column:span 2;text-align:left;">${escapeHtml(d.soil)}</div></div>`
+    + metricRow("Composite hazard", h.composite)
+    + metricRow("Landslide exposure", d.landslide)
+    + metricRow("Flash flood exposure", d.flash_flood);
+
+  $("#terrainRows").innerHTML =
+    metricRow("Construction difficulty", t.construction_difficulty)
+    + metricRow("Slope stability risk", t.slope_stability_risk)
+    + metricRow("Accessibility gap", 100 - d.accessibility)
+    + metricRow("Drainage shortfall", 100 - d.drainage)
+    + `<p class="faint" style="margin-top:10px;">${escapeHtml(t.cut_slope_note)}</p>`;
+
+  drawChart("hazardChart", {
+    type: "bar",
+    data: {
+      labels: h.hazards.map(function (x) { return x.name; }),
+      datasets: [{
+        label: "Exposure",
+        data: h.hazards.map(function (x) { return x.value; }),
+        backgroundColor: h.hazards.map(function (x) { return riskColor(x.value); }),
+        borderRadius: 3,
+      }],
+    },
+    options: { indexAxis: "y", plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, max: 100, grid: { color: GRID } }, y: { grid: { display: false } } } },
+  });
+}
+
+/* Load every Uttarakhand district once for the comparison chart. */
+Promise.all(UK.map(function (name) { return getJSON("/api/district/" + encodeURIComponent(name)); }))
+  .then(function (all) {
+    const rows = all.map(function (item) {
+      return { name: item.district.name, composite: item.hazards.composite,
+               landslide: item.district.landslide, flood: item.district.flood };
+    }).sort(function (a, b) { return b.composite - a.composite; });
+
+    drawChart("compareChart", {
+      type: "bar",
+      data: {
+        labels: rows.map(function (r) { return r.name; }),
+        datasets: [
+          { label: "Composite hazard", data: rows.map(function (r) { return r.composite; }),
+            backgroundColor: rows.map(function (r) { return riskColor(r.composite); }), borderRadius: 3 },
+          { label: "Landslide", data: rows.map(function (r) { return r.landslide; }),
+            backgroundColor: "rgba(76,154,255,.55)", borderRadius: 3 },
+          { label: "Flood", data: rows.map(function (r) { return r.flood; }),
+            backgroundColor: "rgba(53,208,186,.5)", borderRadius: 3 },
+        ],
+      },
+      options: { scales: axes(100) },
+    });
+  });
+
+$$("#districtPills .pill").forEach(function (pill) {
+  pill.addEventListener("click", function () {
+    $$("#districtPills .pill").forEach(function (other) { other.classList.remove("active"); });
+    pill.classList.add("active");
+    load(pill.dataset.name);
+  });
+});
+
+load(UK[0]);
+</script>
+{% endblock %}

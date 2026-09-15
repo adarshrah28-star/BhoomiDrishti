@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block page_title %}Executive dashboard{% endblock %}
+
+{% block content %}
+<div class="notice">
+  <strong>Prototype data.</strong>
+  Every figure below comes from the sample project file and a Random Forest model trained on
+  synthetic data ({{ metrics.rows_trained }} rows). Fit statistics describe that synthetic data
+  only and are not a claim about real-world accuracy.
+</div>
+
+<div class="grid grid-kpi" id="kpiRow"></div>
+
+<div class="grid grid-2" style="margin-top:16px;">
+  <div class="card">
+    <div class="card-head"><h2>Risk distribution</h2><span class="hint">projects by band</span></div>
+    <div class="chart-box short"><canvas id="chartRisk"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Average delay probability by state</h2><span class="hint">percent</span></div>
+    <div class="chart-box short"><canvas id="chartState"></canvas></div>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>District-wise risk</h2><span class="hint">top 10, percent</span></div>
+    <div class="chart-box"><canvas id="chartDistrict"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Delay probability trend</h2><span class="hint">illustrative 12-month view</span></div>
+    <div class="chart-box"><canvas id="chartTrend"></canvas></div>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Top delay drivers</h2><span class="hint">summed model impact across portfolio</span></div>
+    <div class="chart-box short"><canvas id="chartDrivers"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Project stage distribution</h2></div>
+    <div class="chart-box short"><canvas id="chartStage"></canvas></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2>Critical projects</h2>
+    <span class="hint">delay probability 55% and above</span>
+  </div>
+  <div style="margin-bottom:10px;">
+    <input type="text" id="tableFilter" placeholder="Filter by project, state, district or type" style="max-width:340px;">
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Project</th><th>State</th><th>District</th><th>Type</th>
+          <th data-i18n="label.risk">Risk level</th>
+          <th data-i18n="label.delay">Delay probability</th>
+          <th class="wrap">Main risk factor</th>
+        </tr>
+      </thead>
+      <tbody id="criticalBody"></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* The dashboard pulls every number from one API call. */
+getJSON("/api/dashboard").then(function (data) {
+  renderKpis(data.kpi);
+  renderCharts(data);
+  renderTable(data.critical_projects);
+});
+
+function renderKpis(kpi) {
+  const cards = [
+    { label: "Total projects", value: kpi.total_projects, sub: "in the sample portfolio", accent: "" },
+    { label: "High risk", value: kpi.high_risk, sub: "delay probability 55-74%", accent: "accent-high" },
+    { label: "Critical", value: kpi.critical, sub: "delay probability 75%+", accent: "accent-critical" },
+    { label: "Average delay probability", value: kpi.avg_delay_probability + "%", sub: "portfolio mean", accent: "accent-medium" },
+    { label: "Need intervention", value: kpi.needs_intervention, sub: "at or above 65%", accent: "accent-critical" },
+    { label: "Land under assessment", value: kpi.land_area.toLocaleString() + " ha", sub: "sum of sample projects", accent: "accent-blue" },
+    { label: "Affected families", value: kpi.affected_families.toLocaleString(), sub: "reported in sample data", accent: "accent-blue" },
+  ];
+  $("#kpiRow").innerHTML = cards.map(function (card) {
+    return `<div class="kpi ${card.accent}">
+      <div class="kpi-label">${card.label}</div>
+      <div class="kpi-value">${card.value}</div>
+      <div class="kpi-sub">${card.sub}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderCharts(data) {
+  const levels = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+
+  drawChart("chartRisk", {
+    type: "doughnut",
+    data: {
+      labels: levels,
+      datasets: [{
+        data: levels.map(function (l) { return data.risk_distribution[l]; }),
+        backgroundColor: levels.map(function (l) { return RISK_COLORS[l]; }),
+        borderColor: "#101f27", borderWidth: 2,
+      }],
+    },
+    options: { cutout: "58%", plugins: { legend: { position: "right" } } },
+  });
+
+  const stateLabels = Object.keys(data.state_risk);
+  drawChart("chartState", {
+    type: "bar",
+    data: {
+      labels: stateLabels,
+      datasets: [{
+        label: "Average delay probability",
+        data: stateLabels.map(function (s) { return data.state_risk[s]; }),
+        backgroundColor: stateLabels.map(function (s) { return riskColor(data.state_risk[s]); }),
+        borderRadius: 3,
+      }],
+    },
+    options: { indexAxis: "y", plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, max: 100, grid: { color: GRID } }, y: { grid: { display: false } } } },
+  });
+
+  const districtLabels = Object.keys(data.district_risk);
+  drawChart("chartDistrict", {
+    type: "bar",
+    data: {
+      labels: districtLabels,
+      datasets: [{
+        label: "Average delay probability",
+        data: districtLabels.map(function (d) { return data.district_risk[d]; }),
+        backgroundColor: districtLabels.map(function (d) { return riskColor(data.district_risk[d]); }),
+        borderRadius: 3,
+      }],
+    },
+    options: { plugins: { legend: { display: false } }, scales: axes(100) },
+  });
+
+  drawChart("chartTrend", {
+    type: "line",
+    data: {
+      labels: data.trend.labels,
+      datasets: [{
+        label: "Portfolio average delay probability",
+        data: data.trend.values,
+        borderColor: TEAL, backgroundColor: "rgba(53,208,186,.14)",
+        fill: true, tension: 0.35, pointRadius: 3,
+      }],
+    },
+    options: { scales: axes(100) },
+  });
+
+  const driverLabels = Object.keys(data.top_drivers);
+  drawChart("chartDrivers", {
+    type: "bar",
+    data: {
+      labels: driverLabels,
+      datasets: [{
+        label: "Summed impact (percentage points)",
+        data: driverLabels.map(function (d) { return data.top_drivers[d]; }),
+        backgroundColor: BLUE, borderRadius: 3,
+      }],
+    },
+    options: { indexAxis: "y", plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, grid: { color: GRID } }, y: { grid: { display: false } } } },
+  });
+
+  const stageLabels = Object.keys(data.stage_distribution);
+  drawChart("chartStage", {
+    type: "bar",
+    data: {
+      labels: stageLabels,
+      datasets: [{
+        label: "Projects",
+        data: stageLabels.map(function (s) { return data.stage_distribution[s]; }),
+        backgroundColor: TEAL, borderRadius: 3,
+      }],
+    },
+    options: { plugins: { legend: { display: false } }, scales: axes(undefined) },
+  });
+}
+
+let allCritical = [];
+function renderTable(rows) {
+  allCritical = rows;
+  paint(rows);
+  $("#tableFilter").addEventListener("input", function (event) {
+    const term = event.target.value.toLowerCase();
+    paint(allCritical.filter(function (row) {
+      return [row.project_name, row.state, row.district, row.project_type]
+        .join(" ").toLowerCase().includes(term);
+    }));
+  });
+}
+
+function paint(rows) {
+  if (!rows.length) {
+    $("#criticalBody").innerHTML = '<tr><td colspan="7" class="muted">No projects match this filter.</td></tr>';
+    return;
+  }
+  $("#criticalBody").innerHTML = rows.map(function (row) {
+    return `<tr>
+      <td class="wrap">${escapeHtml(row.project_name)}<div class="faint">${row.project_id}</div></td>
+      <td>${escapeHtml(row.state)}</td>
+      <td>${escapeHtml(row.district)}</td>
+      <td>${escapeHtml(row.project_type)}</td>
+      <td>${badge(row.risk_level)}</td>
+      <td class="num" style="min-width:150px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:40px;">${row.delay_probability}%</span>
+          <div class="bar-track" style="flex:1;"><div class="bar-fill ${row.risk_level}" style="width:${row.delay_probability}%"></div></div>
+        </div>
+      </td>
+      <td class="wrap">${escapeHtml(row.model_main_factor)}<div class="faint">recorded: ${escapeHtml(row.main_risk_factor)}</div></td>
+    </tr>`;
+  }).join("");
+}
+</script>
+{% endblock %}

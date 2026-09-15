@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block page_title %}Proposed plan analysis{% endblock %}
+
+{% block content %}
+<div class="notice info">
+  Enter the proposed plan as it stands today. The page estimates land requirement, acquisition
+  complexity and construction constraints, then suggests alternatives worth costing.
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Proposed plan</h2></div>
+  <form id="planForm">
+    <div class="form-grid">
+      <div>
+        <label for="project_type">Project type</label>
+        <select id="project_type" name="project_type">
+          {% for type in project_types %}<option {% if type=='Highway' %}selected{% endif %}>{{ type }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="district">Primary district</label>
+        <select id="district" name="district">
+          {% for district in districts %}<option {% if district=='Rudraprayag' %}selected{% endif %}>{{ district }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="length_km">Project length (km)</label>
+        <input type="number" id="length_km" name="length_km" value="24" min="0.1" max="500" step="0.1">
+      </div>
+      <div>
+        <label for="corridor_m">Corridor width (m)</label>
+        <input type="number" id="corridor_m" name="corridor_m" value="30" min="5" max="120">
+      </div>
+      <div>
+        <label for="settlements">Affected settlements</label>
+        <input type="number" id="settlements" name="settlements" value="7" min="0" max="100">
+      </div>
+      <div>
+        <label for="alignment">Proposed alignment</label>
+        <select id="alignment" name="alignment">
+          <option>Follows existing road</option>
+          <option selected>New hill-cut alignment</option>
+          <option>Valley floor along river</option>
+          <option>Ridge alignment</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-row"><button type="submit" class="btn">Analyse plan</button></div>
+  </form>
+</div>
+
+<div id="out" class="hidden">
+  <div class="grid grid-3">
+    <div class="card">
+      <div class="card-head"><h3>Land requirement</h3></div>
+      <div class="kpi-value" id="landReq"></div>
+      <p class="faint" id="landMath"></p>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Acquisition complexity</h3></div>
+      <div id="complexity" style="font-size:24px;font-weight:700;"></div>
+      <p class="faint" id="complexityWhy"></p>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Preliminary feasibility</h3></div>
+      <div id="feasibility" style="font-size:24px;font-weight:700;"></div>
+      <p class="faint" id="feasibilityWhy"></p>
+    </div>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-head"><h2>Construction constraints</h2></div>
+      <div id="constraintRows"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Alternatives worth costing</h2></div>
+      <div id="altList"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const planForm = $("#planForm");
+
+planForm.addEventListener("submit", async function (event) {
+  event.preventDefault();
+  const values = formValues(planForm);
+
+  /* Land requirement from geometry: length x corridor width, plus 18% for
+     slopes, structures, muck disposal and temporary works. */
+  const lengthKm = parseFloat(values.length_km);
+  const corridorM = parseFloat(values.corridor_m);
+  const baseHa = lengthKm * 1000 * corridorM / 10000;
+  const landHa = +(baseHa * 1.18).toFixed(1);
+  const settlements = parseInt(values.settlements, 10);
+  const familiesEstimate = Math.round(settlements * 38);
+
+  /* Ask the backend to score the site with that land requirement. */
+  const site = await postJSON("/api/site-assess", {
+    district: values.district, project_type: values.project_type,
+    land_area: landHa, affected_families: familiesEstimate,
+  });
+
+  $("#out").classList.remove("hidden");
+  $("#landReq").textContent = landHa + " ha";
+  $("#landMath").textContent = lengthKm + " km \u00d7 " + corridorM + " m corridor = "
+    + baseHa.toFixed(1) + " ha, plus 18% for slopes, structures and temporary works. "
+    + "Estimated " + familiesEstimate + " families across " + settlements + " settlements.";
+
+  const acquisitionRow = site.rows.find(function (r) { return r.name === "Land acquisition risk"; });
+  $("#complexity").innerHTML = badge(acquisitionRow.band) + " <span style='font-size:18px'>" + acquisitionRow.value + "/100</span>";
+  $("#complexityWhy").textContent = settlements + " settlements over " + landHa
+    + " ha means a large number of separate parties; expect parallel compensation and R&R tracks.";
+
+  const feasibilityBand = site.suitability >= 70 ? "LOW" : site.suitability >= 50 ? "MEDIUM" : "HIGH";
+  $("#feasibility").innerHTML = site.suitability + "/100 " + badge(feasibilityBand);
+  $("#feasibilityWhy").textContent = site.verdict;
+
+  $("#constraintRows").innerHTML = site.rows.map(function (row) {
+    return metricRow(row.name, row.value);
+  }).join("") + `<p class="faint" style="margin-top:10px;">${escapeHtml(site.terrain.cut_slope_note)}</p>`;
+
+  /* Alternatives are rule-based suggestions tied to what scored badly. */
+  const alternatives = [];
+  const value = function (name) { return (site.rows.find(function (r) { return r.name === name; }) || {}).value || 0; };
+
+  if (value("Landslide risk") >= 60 || value("Terrain risk") >= 60) {
+    alternatives.push({ priority: "HIGH", trigger: "Steep, landslide-prone alignment",
+      action: "Cost a tunnel or viaduct option against the hill-cut alignment for the worst 2-3 km" });
+  }
+  if (values.alignment === "Valley floor along river") {
+    alternatives.push({ priority: "HIGH", trigger: "Valley floor alignment",
+      action: "Shift the alignment above the high flood level or raise the formation with protection works" });
+  }
+  if (value("Flood risk") >= 55) {
+    alternatives.push({ priority: "MEDIUM", trigger: "Flood exposure",
+      action: "Compare an alignment set back from the river against larger cross-drainage structures" });
+  }
+  if (settlements >= 5) {
+    alternatives.push({ priority: "MEDIUM", trigger: settlements + " settlements affected",
+      action: "Test a bypass variant that clips fewer habitations, even at extra length" });
+  }
+  if (!alternatives.length) {
+    alternatives.push({ priority: "LOW", trigger: "No major constraint flagged",
+      action: "Proceed with detailed survey on the proposed alignment" });
+  }
+  renderRecommendations($("#altList"), alternatives);
+});
+</script>
+{% endblock %}

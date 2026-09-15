@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block page_title %}Data intelligence{% endblock %}
+
+{% block content %}
+<div class="notice">
+  <strong>No scraping happens in this prototype.</strong>
+  The page documents which datasets a production deployment would consume and through what
+  route. Only the two sources marked Connected are actually in use right now.
+</div>
+
+<div class="grid grid-3">
+  {% for group in ["Land Records", "Project Records", "Disaster Data", "Weather Data", "GIS Data"] %}
+  <div class="card">
+    <div class="card-head"><h3>{{ group }}</h3></div>
+    {% for source in sources if source.type == group %}
+      <div style="padding:9px 0;border-bottom:1px solid var(--line-soft)">
+        <div>
+          <span class="status-dot status-{{ source.status.split(' ')[0] }}"></span>
+          <strong style="font-size:13px;">{{ source.name }}</strong>
+        </div>
+        <div class="faint" style="margin-left:14px;">{{ source.detail }}</div>
+        <div style="margin-left:14px;margin-top:4px;">
+          <span class="badge {{ 'LOW' if source.status == 'Connected' else 'MEDIUM' if source.status == 'Prototype' else 'HIGH' }}">{{ source.status }}</span>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>How data would flow in production</h2></div>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-year">1. Authorised access</div>
+        <div class="muted">Data-sharing agreements with the revenue department, executing agency and state disaster authority. No public scraping.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-year">2. Scheduled ingestion</div>
+        <div class="muted">A nightly job pulls project status, acquisition progress and rainfall observations into a staging database.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-year">3. Validation</div>
+        <div class="muted">Records are checked for missing khasra entries, duplicate parcels and out-of-range values before they reach the model.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-year">4. Retraining</div>
+        <div class="muted">The delay model is retrained on verified historical outcomes, replacing the synthetic dataset this prototype ships with.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-year">5. Screening and alerts</div>
+        <div class="muted">Scores refresh, thresholds fire, and alerts route to the responsible officer.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>What this prototype actually reads</h2></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Contents</th><th>Rows</th></tr></thead>
+        <tbody>
+          <tr><td>data/projects.csv</td><td class="wrap">Sample projects with acquisition indicators and coordinates</td><td class="num">15</td></tr>
+          <tr><td>data/districts.json</td><td class="wrap">District terrain, hazard and soil profiles</td><td class="num">19</td></tr>
+          <tr><td>model/risk_model.py</td><td class="wrap">Synthetic training rows generated at startup</td><td class="num">4,000</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="faint" style="margin-top:12px;">
+      Everything the platform shows is derived from these three places, which is why every number
+      on screen can be traced back to a formula or a sample record.
+    </p>
+  </div>
+</div>
+{% endblock %}

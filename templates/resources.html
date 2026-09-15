@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block page_title %}Resources{% endblock %}
+
+{% block content %}
+<div class="notice">
+  <strong>Placeholder reference list.</strong>
+  The entries below name the kind of document each category needs. Replace the descriptions with
+  links to the current official publications before any real use, and check the version in force.
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Land acquisition guidelines</h2></div>
+    <ul class="muted">
+      <li>The Right to Fair Compensation and Transparency in Land Acquisition, Rehabilitation and Resettlement Act, 2013, and the state rules made under it</li>
+      <li>State-level compensation and solatium calculation circulars</li>
+      <li>Rehabilitation and resettlement entitlement matrix for the relevant state</li>
+      <li>Grievance redressal and Land Acquisition, Rehabilitation and Resettlement Authority procedure</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Geotechnical investigation</h2></div>
+    <ul class="muted">
+      <li>IS 1892: code of practice for subsurface investigation for foundations</li>
+      <li>IS 2131: method for standard penetration test for soils</li>
+      <li>IS 6403: determination of bearing capacity of shallow foundations</li>
+      <li>IRC:78 for road bridge foundation provisions</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Disaster risk management</h2></div>
+    <ul class="muted">
+      <li>National Disaster Management Authority guidelines for landslides and snow avalanches</li>
+      <li>State Disaster Management Authority hazard and vulnerability assessments</li>
+      <li>Central Water Commission flood forecasting and historical flood level records</li>
+      <li>IS 1893: criteria for earthquake-resistant design, including seismic zoning</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Landslide mitigation</h2></div>
+    <ul class="muted">
+      <li>Geological Survey of India landslide susceptibility mapping for the project district</li>
+      <li>IRC:SP:48 hill road manual guidance on slope stability and drainage</li>
+      <li>Ministry of Road Transport and Highways guidance on hill road cut slopes and muck disposal</li>
+      <li>Bio-engineering and slope protection practice notes</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Infrastructure planning</h2></div>
+    <ul class="muted">
+      <li>Detailed project report preparation guidelines for the relevant sector</li>
+      <li>PM Gati Shakti national master plan portal for alignment and utility coordination</li>
+      <li>Environmental and forest clearance procedure under the applicable notifications</li>
+      <li>Standard bidding documents and contract conditions used by the executing agency</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Government notifications</h2></div>
+    <ul class="muted">
+      <li>Section 11 preliminary notifications and Section 19 declarations for the project corridor</li>
+      <li>State gazette notifications on land conversion and change of land use</li>
+      <li>Eco-sensitive zone and protected area notifications along the alignment</li>
+      <li>District-level award and compensation disbursement orders</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Connecting real sources</h2></div>
+  <p class="muted" style="max-width:82ch;">
+    Each category above corresponds to a data source on the Data Intelligence page. A production
+    build would store the document reference, its issuing authority, its date and the project it
+    applies to, so a reviewer can see which version of a guideline a given assessment was based
+    on. That traceability matters more than the number of links.
+  </p>
+</div>
+{% endblock %}

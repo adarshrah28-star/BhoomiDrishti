@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block page_title %}Preliminary disaster risk screening{% endblock %}
+
+{% block content %}
+<div class="notice">
+  <strong>Screening, not forecasting.</strong>
+  These indicators describe standing exposure from terrain and recorded history in the sample
+  dataset. They do not predict that an event will occur on any particular date, and they do not
+  replace NDMA, GSI, IMD or CWC assessment.
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Select a location</h2></div>
+  <div class="form-grid">
+    <div>
+      <label for="district">District</label>
+      <select id="district">
+        <optgroup label="Uttarakhand">
+          {% for d in uk_districts %}<option {% if d=='Chamoli' %}selected{% endif %}>{{ d }}</option>{% endfor %}
+        </optgroup>
+        <optgroup label="Other states">
+          {% for d in districts %}{% if d not in uk_districts %}<option>{{ d }}</option>{% endif %}{% endfor %}
+        </optgroup>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-3" id="gauges"></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Composite exposure</h2><span class="hint" id="compositeMeta"></span></div>
+    <div class="score-hero">
+      <div class="score-dial">
+        <canvas id="compositeDial"></canvas>
+        <div class="score-text">
+          <div class="score-num" id="compositeValue">-</div>
+          <div class="score-den">of 100</div>
+        </div>
+      </div>
+      <div>
+        <div id="compositeBadge"></div>
+        <p class="muted" id="compositeNote" style="max-width:260px;margin-top:8px;"></p>
+      </div>
+    </div>
+    <div id="hazardRows" style="margin-top:12px;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>How terrain drives the exposure</h2></div>
+    <div class="chart-box"><canvas id="driverChart"></canvas></div>
+    <p class="faint">Steeper slopes with weaker drainage push landslide and flash-flood exposure
+      up together, which is why hill districts score high on both.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Mitigation actions this exposure calls for</h2></div>
+  <div id="actions"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function load(name) {
+  const data = await getJSON("/api/district/" + encodeURIComponent(name));
+  const d = data.district, h = data.hazards, t = data.terrain;
+
+  /* One gauge card per hazard. */
+  $("#gauges").innerHTML = h.hazards.map(function (hazard, index) {
+    return `<div class="card" style="margin-bottom:0">
+      <div class="card-head"><h3>${escapeHtml(hazard.name)}</h3></div>
+      <div class="score-hero">
+        <div class="score-dial" style="width:104px;height:104px;flex:0 0 104px;">
+          <canvas id="gauge${index}"></canvas>
+          <div class="score-text">
+            <div class="score-num" style="font-size:22px;">${hazard.value}</div>
+            <div class="score-den">of 100</div>
+          </div>
+        </div>
+        <div>${badge(hazard.band)}</div>
+      </div>
+    </div>`;
+  }).join("");
+
+  h.hazards.forEach(function (hazard, index) {
+    scoreDial("gauge" + index, hazard.value, RISK_COLORS[hazard.band]);
+  });
+
+  $("#compositeValue").textContent = h.composite;
+  scoreDial("compositeDial", h.composite, RISK_COLORS[h.composite_band]);
+  $("#compositeBadge").innerHTML = badge(h.composite_band);
+  $("#compositeMeta").textContent = d.name + " \u00b7 seismic zone " + d.seismic_zone;
+  $("#compositeNote").textContent = h.disclaimer;
+
+  $("#hazardRows").innerHTML = h.hazards.map(function (hazard) {
+    return metricRow(hazard.name, hazard.value);
+  }).join("");
+
+  drawChart("driverChart", {
+    type: "bar",
+    data: {
+      labels: ["Slope risk", "Drainage shortfall", "Landslide", "Flash flood", "Extreme rainfall"],
+      datasets: [{
+        label: "Indicator value",
+        data: [t.slope_risk, 100 - d.drainage, d.landslide, d.flash_flood, d.extreme_rainfall],
+        backgroundColor: [BLUE, BLUE, RISK_COLORS.HIGH, RISK_COLORS.HIGH, RISK_COLORS.MEDIUM],
+        borderRadius: 3,
+      }],
+    },
+    options: { plugins: { legend: { display: false } }, scales: axes(100) },
+  });
+
+  const actions = [];
+  if (d.landslide >= 60) actions.push({ priority: "HIGH", trigger: "Landslide exposure " + d.landslide,
+    action: "Detailed slope stability and geological investigation along the alignment; slope protection works in the estimate" });
+  if (d.flash_flood >= 60) actions.push({ priority: "HIGH", trigger: "Flash flood exposure " + d.flash_flood,
+    action: "Size cross-drainage for debris-laden flow and keep camps and stockyards out of the stream corridor" });
+  if (d.flood >= 60) actions.push({ priority: "HIGH", trigger: "Flood exposure " + d.flood,
+    action: "Confirm the high flood level for the design return period and review embankment protection" });
+  if (d.earthquake >= 60) actions.push({ priority: "MEDIUM", trigger: "Seismic zone " + d.seismic_zone,
+    action: "Apply IS 1893 zone factors and review liquefaction potential for saturated soils" });
+  if (d.cloudburst >= 55) actions.push({ priority: "MEDIUM", trigger: "Cloudburst exposure " + d.cloudburst,
+    action: "Build monsoon shutdown triggers and an evacuation plan into the construction programme" });
+  if (!actions.length) actions.push({ priority: "LOW", trigger: "Exposure below screening thresholds",
+    action: "Standard drainage and seismic provisions should suffice; confirm during detailed design" });
+
+  renderRecommendations($("#actions"), actions);
+}
+
+$("#district").addEventListener("change", function (event) { load(event.target.value); });
+load($("#district").value);
+</script>
+{% endblock %}

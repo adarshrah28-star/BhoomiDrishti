@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block page_title %}Contractor view{% endblock %}
+
+{% block content %}
+<div class="notice info">
+  A site-team view of one project: what the screening says, what is blocking work, and the
+  actions worth starting this week.
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Select your project</h2></div>
+  <div class="form-grid">
+    <div>
+      <label for="projectSelect">Project</label>
+      <select id="projectSelect">
+        {% for project in projects %}
+          <option value="{{ project.project_id }}">{{ project.project_name }} &mdash; {{ project.district }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-4" id="siteKpis"></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Risk summary</h2><span class="hint" id="riskMeta"></span></div>
+    <div id="riskRows"></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Critical issues</h2></div>
+    <div id="issueList"></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Recommended actions</h2><span class="hint">ordered by priority</span></div>
+  <div id="actionList"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const PROJECTS = {{ projects|tojson }};
+
+async function load(projectId) {
+  const p = PROJECTS.find(function (item) { return item.project_id === projectId; });
+  if (!p) return;
+
+  const site = await postJSON("/api/site-assess", {
+    district: p.district, project_type: p.project_type,
+    land_area: p.land_area, affected_families: p.affected_families,
+  });
+
+  const value = function (name) {
+    const row = site.rows.find(function (r) { return r.name === name; });
+    return row ? row.value : 0;
+  };
+
+  $("#siteKpis").innerHTML = [
+    { label: "Site suitability", value: site.suitability + "/100", sub: site.suitability_band, accent: "accent-blue" },
+    { label: "Construction risk", value: value("Construction risk"), sub: band(value("Construction risk")), accent: "accent-high" },
+    { label: "Land acquisition risk", value: value("Land acquisition risk"), sub: band(value("Land acquisition risk")), accent: "accent-medium" },
+    { label: "Delay probability", value: p.delay_probability + "%", sub: p.risk_level + " \u00b7 " + p.expected_delay, accent: "accent-critical" },
+  ].map(function (card) {
+    return `<div class="kpi ${card.accent}">
+      <div class="kpi-label">${card.label}</div>
+      <div class="kpi-value">${card.value}</div>
+      <div class="kpi-sub">${card.sub}</div></div>`;
+  }).join("");
+
+  $("#riskMeta").textContent = p.district + ", " + p.state + " \u00b7 " + p.project_type + " \u00b7 " + p.stage;
+  $("#riskRows").innerHTML = site.rows.map(function (row) { return metricRow(row.name, row.value); }).join("");
+
+  /* Critical issues: anything that would actually stop work starting. */
+  const issues = [];
+  if (p.possession_acquired < 60) issues.push({ priority: "HIGH",
+    trigger: "Possession at " + p.possession_acquired + "%",
+    action: "Large stretches are not handed over; work fronts are limited" });
+  if (p.legal_disputes >= 4) issues.push({ priority: "HIGH",
+    trigger: p.legal_disputes + " active disputes",
+    action: "Litigation can halt work on disputed stretches without notice" });
+  if (p.compensation_pending >= 50) issues.push({ priority: "HIGH",
+    trigger: "Compensation pending " + p.compensation_pending + "%",
+    action: "Expect local resistance at the site until disbursement progresses" });
+  if (value("Landslide risk") >= 60) issues.push({ priority: "HIGH",
+    trigger: "Landslide risk " + value("Landslide risk"),
+    action: "Cut slopes and haul roads are exposed during monsoon" });
+  if (value("Flood risk") >= 60) issues.push({ priority: "MEDIUM",
+    trigger: "Flood risk " + value("Flood risk"),
+    action: "Camp, stockyard and plant locations need to sit above flood level" });
+  if (site.terrain.accessibility < 50) issues.push({ priority: "MEDIUM",
+    trigger: "Accessibility " + site.terrain.accessibility,
+    action: "Material delivery and equipment mobilisation will pace the schedule" });
+  if (!issues.length) issues.push({ priority: "LOW", trigger: "No blocking issue flagged",
+    action: "Proceed with mobilisation planning" });
+
+  renderRecommendations($("#issueList"), issues);
+  renderRecommendations($("#actionList"), site.recommendations);
+}
+
+$("#projectSelect").addEventListener("change", function (event) { load(event.target.value); });
+load(PROJECTS[0].project_id);
+</script>
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block page_title %}Terrain analysis{% endblock %}
+
+{% block content %}
+<div class="notice">
+  <strong>Sample terrain values.</strong> Elevation and slope figures here are prototype
+  estimates. A production build would derive them from a digital elevation model along the
+  actual alignment rather than a district average.
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Select a location</h2></div>
+  <div class="form-grid">
+    <div>
+      <label for="district">District</label>
+      <select id="district">
+        <optgroup label="Uttarakhand">
+          {% for d in uk_districts %}<option {% if d=='Uttarkashi' %}selected{% endif %}>{{ d }}</option>{% endfor %}
+        </optgroup>
+        <optgroup label="Other states">
+          {% for d in districts %}{% if d not in uk_districts %}<option>{{ d }}</option>{% endif %}{% endfor %}
+        </optgroup>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-4" id="terrainKpis"></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Terrain indicators</h2></div>
+    <div id="indicatorRows"></div>
+    <p class="faint" id="cutNote" style="margin-top:12px;"></p>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Slope profile across districts</h2><span class="hint">selected district highlighted</span></div>
+    <div class="chart-box"><canvas id="slopeChart"></canvas></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>What terrain difficulty changes on site</h2></div>
+  <div id="implications"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const ALL = {{ districts|tojson }};
+let cache = {};
+
+async function loadAll() {
+  const results = await Promise.all(ALL.map(function (name) {
+    return getJSON("/api/district/" + encodeURIComponent(name));
+  }));
+  results.forEach(function (item) { cache[item.district.name] = item; });
+  render($("#district").value);
+}
+
+function render(name) {
+  const item = cache[name];
+  if (!item) return;
+  const d = item.district, t = item.terrain;
+
+  $("#terrainKpis").innerHTML = [
+    { label: "Elevation", value: d.elevation_m + " m", sub: d.terrain, accent: "accent-blue" },
+    { label: "Average slope", value: d.avg_slope_deg + "\u00b0", sub: band(t.slope_risk) + " slope band", accent: "" },
+    { label: "Construction difficulty", value: t.construction_difficulty + "/100", sub: t.construction_difficulty_band, accent: "accent-high" },
+    { label: "Slope stability risk", value: t.slope_stability_risk + "/100", sub: t.slope_stability_band, accent: "accent-medium" },
+  ].map(function (card) {
+    return `<div class="kpi ${card.accent}">
+      <div class="kpi-label">${card.label}</div>
+      <div class="kpi-value">${card.value}</div>
+      <div class="kpi-sub">${card.sub}</div></div>`;
+  }).join("");
+
+  $("#indicatorRows").innerHTML =
+    metricRow("Slope risk", t.slope_risk)
+    + metricRow("Construction difficulty", t.construction_difficulty)
+    + metricRow("Slope stability risk", t.slope_stability_risk)
+    + metricRow("Accessibility gap", 100 - d.accessibility)
+    + metricRow("Drainage shortfall", 100 - d.drainage)
+    + `<div class="metric-row"><div class="metric-name">Terrain type</div><div class="metric-value" style="grid-column:span 2;text-align:left;">${escapeHtml(d.terrain)}</div></div>
+       <div class="metric-row"><div class="metric-name">Indicative soil</div><div class="metric-value" style="grid-column:span 2;text-align:left;">${escapeHtml(d.soil)}</div></div>`;
+
+  $("#cutNote").textContent = t.cut_slope_note;
+
+  const rows = Object.values(cache).map(function (x) {
+    return { name: x.district.name, slope: x.district.avg_slope_deg, elevation: x.district.elevation_m };
+  }).sort(function (a, b) { return b.slope - a.slope; });
+
+  drawChart("slopeChart", {
+    type: "bar",
+    data: {
+      labels: rows.map(function (r) { return r.name; }),
+      datasets: [{
+        label: "Average slope (degrees)",
+        data: rows.map(function (r) { return r.slope; }),
+        backgroundColor: rows.map(function (r) { return r.name === name ? TEAL : "rgba(76,154,255,.45)"; }),
+        borderRadius: 3,
+      }],
+    },
+    options: { plugins: { legend: { display: false } }, scales: axes(undefined) },
+  });
+
+  /* Turn terrain numbers into things a site team actually has to plan for. */
+  const items = [];
+  if (d.avg_slope_deg >= 25) {
+    items.push({ priority: "HIGH", trigger: "Slope " + d.avg_slope_deg + "\u00b0",
+      action: "Plan benched cut slopes, retaining or breast walls, and controlled muck disposal sites" });
+  }
+  if (t.slope_stability_risk >= 55) {
+    items.push({ priority: "HIGH", trigger: "Slope stability risk " + t.slope_stability_risk,
+      action: "Commission slope stability analysis and surface plus subsurface drainage design" });
+  }
+  if (d.accessibility < 55) {
+    items.push({ priority: "MEDIUM", trigger: "Accessibility " + d.accessibility,
+      action: "Plan haul roads, material storage and an all-weather access strategy before mobilisation" });
+  }
+  if (d.elevation_m >= 1500) {
+    items.push({ priority: "MEDIUM", trigger: "Elevation " + d.elevation_m + " m",
+      action: "Allow for a shortened working season and cold-weather concreting measures" });
+  }
+  if (!items.length) {
+    items.push({ priority: "LOW", trigger: "Near-level ground",
+      action: "Standard earthwork and side-slope protection should be sufficient" });
+  }
+  renderRecommendations($("#implications"), items);
+}
+
+$("#district").addEventListener("change", function (event) { render(event.target.value); });
+loadAll();
+</script>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block page_title %}Preliminary geotechnical screening{% endblock %}
+
+{% block content %}
+<div class="notice">
+  <strong>Screening indicators only.</strong>
+  This page cannot determine pile depth, foundation depth, bearing capacity or reinforcement.
+  Final geotechnical design requires certified site investigation and qualified engineering
+  approval. Use the output to decide where to drill first and how deep to plan the investigation.
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Available site information</h2><span class="hint">enter whatever you have; defaults are typical hill-valley values</span></div>
+  <form id="geoForm">
+    <div class="form-grid">
+      <div>
+        <label for="soil_type">Soil description</label>
+        <select id="soil_type" name="soil_type">
+          {% for soil in soil_types %}<option {% if soil=='Silty soil' %}selected{% endif %}>{{ soil }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="spt_n">SPT N-value (blows / 300 mm)</label>
+        <input type="number" id="spt_n" name="spt_n" value="11" min="0" max="80">
+      </div>
+      <div>
+        <label for="groundwater_m">Groundwater depth (m below ground)</label>
+        <input type="number" id="groundwater_m" name="groundwater_m" value="2.5" min="0" max="40" step="0.1">
+      </div>
+      <div>
+        <label for="rock_depth_m">Depth to rock (m)</label>
+        <input type="number" id="rock_depth_m" name="rock_depth_m" value="14" min="0" max="60" step="0.5">
+      </div>
+      <div>
+        <label for="moisture">Soil moisture content (%)</label>
+        <input type="number" id="moisture" name="moisture" value="26" min="0" max="80">
+      </div>
+      <div>
+        <label for="cohesion">Cohesion, c (kPa)</label>
+        <input type="number" id="cohesion" name="cohesion" value="18" min="0" max="200">
+      </div>
+      <div>
+        <label for="friction_angle">Friction angle, &phi; (degrees)</label>
+        <input type="number" id="friction_angle" name="friction_angle" value="26" min="0" max="50">
+      </div>
+      <div>
+        <label for="borehole_data">Borehole data available</label>
+        <select id="borehole_data" name="borehole_data">
+          <option value="no" selected>No</option>
+          <option value="yes">Yes</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-row"><button type="submit" class="btn" data-i18n="label.screen">Run screening</button></div>
+  </form>
+</div>
+
+<div id="out" class="hidden">
+  <div class="grid grid-3">
+    <div class="card">
+      <div class="card-head"><h3>Preliminary soil stability</h3></div>
+      <div class="score-hero">
+        <div class="score-dial">
+          <canvas id="stabilityDial"></canvas>
+          <div class="score-text">
+            <div class="score-num" id="stabilityValue">-</div>
+            <div class="score-den">of 100</div>
+          </div>
+        </div>
+        <div id="stabilityBadge"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Risk indicators</h3></div>
+      <div id="riskRows"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Investigation planning</h3></div>
+      <div id="planRows"></div>
+    </div>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-head"><h2>Indicator contributions</h2><span class="hint">higher is more favourable</span></div>
+      <div class="chart-box"><canvas id="indicatorChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Next steps</h2></div>
+      <div id="recoList"></div>
+      <p class="faint" id="finalDisclaimer" style="margin-top:12px;"></p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const geoForm = $("#geoForm");
+
+geoForm.addEventListener("submit", async function (event) {
+  event.preventDefault();
+  const data = await postJSON("/api/geotech", formValues(geoForm));
+  render(data);
+});
+
+function render(data) {
+  $("#out").classList.remove("hidden");
+
+  /* A high stability score is good, so colour it on the inverted band. */
+  const stabilityColor = RISK_COLORS[data.stability_band];
+  $("#stabilityValue").textContent = data.stability;
+  scoreDial("stabilityDial", data.stability, stabilityColor);
+  $("#stabilityBadge").innerHTML = badge(data.stability_band)
+    + '<p class="faint" style="margin-top:8px;max-width:190px;">Band reflects concern level: a high stability score gives a LOW concern band.</p>';
+
+  $("#riskRows").innerHTML =
+    metricRow("Settlement risk", data.settlement_risk)
+    + metricRow("Excavation risk", data.excavation_risk)
+    + metricRow("Groundwater concern", data.groundwater_concern);
+
+  $("#planRows").innerHTML = `
+    <div class="metric-row"><div class="metric-name">Recommended investigation depth</div>
+      <div class="metric-value" style="grid-column:span 2;text-align:left;">${escapeHtml(data.recommended_investigation_depth)}</div></div>
+    <div class="metric-row"><div class="metric-name">Investigation priority</div>
+      <div class="metric-value" style="grid-column:span 2;text-align:left;">${badge(data.investigation_priority)}</div></div>
+    <div class="metric-row"><div class="metric-name">Indicative bearing range</div>
+      <div class="metric-value" style="grid-column:span 2;text-align:left;font-size:12.5px;">${escapeHtml(data.indicative_bearing_range)}</div></div>
+    <div class="metric-row"><div class="metric-name">Borehole data on record</div>
+      <div class="metric-value" style="grid-column:span 2;text-align:left;">${data.inputs.borehole_data ? "Yes" : "No, screening is less reliable"}</div></div>`;
+
+  drawChart("indicatorChart", {
+    type: "bar",
+    data: {
+      labels: data.indicators.map(function (i) { return i.name; }),
+      datasets: [{
+        label: "Favourability (0-100)",
+        data: data.indicators.map(function (i) { return i.score; }),
+        backgroundColor: data.indicators.map(function (i) { return riskColor(100 - i.score); }),
+        borderRadius: 3,
+      }],
+    },
+    options: { indexAxis: "y", plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, max: 100, grid: { color: GRID } }, y: { grid: { display: false } } } },
+  });
+
+  renderRecommendations($("#recoList"), data.recommendations);
+  $("#finalDisclaimer").textContent = data.disclaimer;
+}
+</script>
+{% endblock %}

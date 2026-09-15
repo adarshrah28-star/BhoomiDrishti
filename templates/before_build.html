@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block page_title %}Before you build{% endblock %}
+
+{% block content %}
+<div class="notice info">
+  Screen a proposed site before land is acquired. The score combines terrain, hazard exposure,
+  acquisition difficulty and a preliminary geotechnical proxy for the selected district.
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Proposed site</h2><span class="hint">Uttarakhand districts listed first</span></div>
+  <form id="siteForm">
+    <div class="form-grid">
+      <div>
+        <label for="district">Location (district)</label>
+        <select id="district" name="district">
+          <optgroup label="Uttarakhand">
+            {% for district in uk_districts %}<option {% if district=='Chamoli' %}selected{% endif %}>{{ district }}</option>{% endfor %}
+          </optgroup>
+          <optgroup label="Other states">
+            {% for district in districts %}{% if district not in uk_districts %}<option>{{ district }}</option>{% endif %}{% endfor %}
+          </optgroup>
+        </select>
+      </div>
+      <div>
+        <label for="project_type">Project type</label>
+        <select id="project_type" name="project_type">
+          {% for type in project_types %}<option {% if type=='Road' %}selected{% endif %}>{{ type }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="land_area">Land area required (hectares)</label>
+        <input type="number" id="land_area" name="land_area" value="95" min="1" max="2000" step="0.1">
+      </div>
+      <div>
+        <label for="affected_families">Affected families (estimate)</label>
+        <input type="number" id="affected_families" name="affected_families" value="260" min="0" max="5000">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button type="submit" class="btn" data-i18n="label.assess">Assess this site</button>
+      <span id="status" class="faint"></span>
+    </div>
+  </form>
+</div>
+
+<div id="output" class="hidden">
+  <div class="grid grid-3">
+    <div class="card">
+      <div class="card-head"><h3 data-i18n="label.suitability">Site suitability</h3></div>
+      <div class="score-hero">
+        <div class="score-dial">
+          <canvas id="suitDial"></canvas>
+          <div class="score-text">
+            <div class="score-num" id="suitValue">-</div>
+            <div class="score-den">of 100</div>
+          </div>
+        </div>
+        <div>
+          <div id="suitBadge"></div>
+          <p class="muted" id="verdict" style="margin-top:8px;max-width:220px;"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Risk profile</h3></div>
+      <div id="riskRows"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Site conditions</h3></div>
+      <div id="conditions"></div>
+    </div>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-head"><h2>Risk radar</h2><span class="hint">higher is worse</span></div>
+      <div class="chart-box"><canvas id="radarChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Hazard screening</h2></div>
+      <div class="chart-box"><canvas id="hazardChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>What to do before construction</h2><span class="hint">generated from the triggered rules</span></div>
+    <div id="recoList"></div>
+  </div>
+
+  <div class="notice"><strong>Screening only.</strong> <span id="disclaimerText"></span></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const siteForm = $("#siteForm");
+
+siteForm.addEventListener("submit", async function (event) {
+  event.preventDefault();
+  $("#status").innerHTML = '<span class="spinner"></span> assessing';
+  const data = await postJSON("/api/site-assess", formValues(siteForm));
+  render(data);
+  $("#status").textContent = "";
+});
+
+function render(data) {
+  $("#output").classList.remove("hidden");
+  const level = data.suitability_band;
+
+  $("#suitValue").textContent = data.suitability;
+  scoreDial("suitDial", data.suitability, RISK_COLORS[level]);
+  $("#suitBadge").innerHTML = badge(level) + ` <span class="faint">${escapeHtml(data.district)}, ${escapeHtml(data.state)}</span>`;
+  $("#verdict").textContent = data.verdict;
+
+  $("#riskRows").innerHTML = data.rows.map(function (row) {
+    return metricRow(row.name, row.value, "");
+  }).join("");
+
+  const t = data.terrain;
+  $("#conditions").innerHTML = `
+    <div class="metric-row"><div class="metric-name">Elevation</div><div class="metric-value">${t.elevation_m} m</div><div class="faint">${escapeHtml(t.terrain)}</div></div>
+    <div class="metric-row"><div class="metric-name">Average slope</div><div class="metric-value">${t.avg_slope_deg}&deg;</div><div class="faint">${badge(band(t.slope_risk))}</div></div>
+    <div class="metric-row"><div class="metric-name">Accessibility</div><div class="metric-value">${t.accessibility}</div><div class="faint">of 100</div></div>
+    <div class="metric-row"><div class="metric-name">Seismic zone</div><div class="metric-value">${data.seismic_zone}</div><div class="faint">BIS zone</div></div>
+    <div class="metric-row"><div class="metric-name">Indicative soil</div><div class="metric-value" style="text-align:left;grid-column:span 2;">${escapeHtml(t.soil)}</div></div>
+    <p class="faint" style="margin-top:10px;">${escapeHtml(t.cut_slope_note)}</p>`;
+
+  drawChart("radarChart", {
+    type: "radar",
+    data: {
+      labels: data.rows.map(function (r) { return r.name.replace(" risk", ""); }),
+      datasets: [{
+        label: "Risk (0-100)",
+        data: data.rows.map(function (r) { return r.value; }),
+        borderColor: RISK_COLORS[level],
+        backgroundColor: "rgba(241,115,92,.16)",
+        pointBackgroundColor: RISK_COLORS[level],
+      }],
+    },
+    options: {
+      scales: { r: { min: 0, max: 100, grid: { color: GRID }, angleLines: { color: GRID },
+                     pointLabels: { color: TEXT_DIM, font: { size: 10.5 } },
+                     ticks: { backdropColor: "transparent", color: "#6d8792", stepSize: 25 } } },
+      plugins: { legend: { display: false } },
+    },
+  });
+
+  const hazards = data.hazards.hazards;
+  drawChart("hazardChart", {
+    type: "bar",
+    data: {
+      labels: hazards.map(function (h) { return h.name; }),
+      datasets: [{
+        label: "Exposure (0-100)",
+        data: hazards.map(function (h) { return h.value; }),
+        backgroundColor: hazards.map(function (h) { return riskColor(h.value); }),
+        borderRadius: 3,
+      }],
+    },
+    options: { indexAxis: "y", plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, max: 100, grid: { color: GRID } }, y: { grid: { display: false } } } },
+  });
+
+  renderRecommendations($("#recoList"), data.recommendations);
+  $("#disclaimerText").textContent = data.disclaimer;
+}
+</script>
+{% endblock %}

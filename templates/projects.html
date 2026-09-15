@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block page_title %}Project monitoring{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-head">
+    <h2>All sample projects</h2>
+    <span class="hint">{{ projects|length }} projects, sorted by delay probability</span>
+  </div>
+
+  <div class="form-grid" style="margin-bottom:12px;">
+    <div>
+      <label for="search">Search</label>
+      <input type="text" id="search" placeholder="Project, district or type">
+    </div>
+    <div>
+      <label for="riskFilter">Risk level</label>
+      <select id="riskFilter">
+        <option value="">All levels</option>
+        <option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option>
+      </select>
+    </div>
+    <div>
+      <label for="stageFilter">Stage</label>
+      <select id="stageFilter"><option value="">All stages</option></select>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Project</th><th>Location</th><th>Type</th><th>Stage</th>
+          <th class="num">Land (ha)</th><th class="num">Families</th>
+          <th>Risk</th><th class="num">Delay</th><th class="num">Compensation pending</th>
+          <th class="num">Possession</th><th class="wrap">Model driver</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Detail panel, filled when a row's "View" button is clicked -->
+<div class="card hidden" id="detailCard">
+  <div class="card-head"><h2 id="detailTitle"></h2><span class="hint" id="detailMeta"></span></div>
+  <div class="grid grid-2">
+    <div id="detailMetrics"></div>
+    <div><div class="chart-box short"><canvas id="detailChart"></canvas></div></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const PROJECTS = {{ projects|tojson }};
+
+/* Fill the stage dropdown from the data itself. */
+const stages = Array.from(new Set(PROJECTS.map(function (p) { return p.stage; })));
+$("#stageFilter").innerHTML += stages.map(function (s) { return `<option>${s}</option>`; }).join("");
+
+function visibleRows() {
+  const term = $("#search").value.toLowerCase();
+  const risk = $("#riskFilter").value;
+  const stage = $("#stageFilter").value;
+  return PROJECTS.filter(function (p) {
+    const haystack = [p.project_name, p.district, p.state, p.project_type].join(" ").toLowerCase();
+    return haystack.includes(term)
+      && (!risk || p.risk_level === risk)
+      && (!stage || p.stage === stage);
+  });
+}
+
+function paint() {
+  const rows = visibleRows();
+  if (!rows.length) {
+    $("#rows").innerHTML = '<tr><td colspan="12" class="muted">Nothing matches these filters.</td></tr>';
+    return;
+  }
+  $("#rows").innerHTML = rows.map(function (p) {
+    return `<tr>
+      <td class="wrap">${escapeHtml(p.project_name)}<div class="faint">${p.project_id}</div></td>
+      <td>${escapeHtml(p.district)}<div class="faint">${escapeHtml(p.state)}</div></td>
+      <td>${escapeHtml(p.project_type)}</td>
+      <td>${escapeHtml(p.stage)}</td>
+      <td class="num">${p.land_area}</td>
+      <td class="num">${p.affected_families}</td>
+      <td>${badge(p.risk_level)}</td>
+      <td class="num">${p.delay_probability}%</td>
+      <td class="num">${p.compensation_pending}%</td>
+      <td class="num">${p.possession_acquired}%</td>
+      <td class="wrap">${escapeHtml(p.model_main_factor)}</td>
+      <td><button class="btn btn-ghost" style="padding:5px 11px" data-id="${p.project_id}">View</button></td>
+    </tr>`;
+  }).join("");
+
+  $$("#rows button").forEach(function (button) {
+    button.addEventListener("click", function () { showDetail(button.dataset.id); });
+  });
+}
+
+function showDetail(projectId) {
+  const p = PROJECTS.find(function (item) { return item.project_id === projectId; });
+  if (!p) return;
+  $("#detailCard").classList.remove("hidden");
+  $("#detailTitle").textContent = p.project_name;
+  $("#detailMeta").textContent = p.district + ", " + p.state + " \u00b7 " + p.project_type
+    + " \u00b7 " + p.stage + " \u00b7 expected delay " + p.expected_delay;
+
+  $("#detailMetrics").innerHTML =
+    metricRow("Delay probability", p.delay_probability, "%")
+    + metricRow("Compensation pending", p.compensation_pending, "%")
+    + metricRow("Documentation gap", 100 - p.documentation_completion, "%")
+    + metricRow("Possession outstanding", 100 - p.possession_acquired, "%")
+    + metricRow("R&R shortfall", 100 - p.rr_progress, "%")
+    + metricRow("Stakeholder gap", 100 - p.stakeholder_responsiveness, "%");
+
+  drawChart("detailChart", {
+    type: "bar",
+    data: {
+      labels: p.top_factors.map(function (f) { return f.label; }),
+      datasets: [{
+        label: "Share of this project's risk (%)",
+        data: p.top_factors.map(function (f) { return f.percent; }),
+        backgroundColor: [RISK_COLORS.CRITICAL, RISK_COLORS.HIGH, BLUE],
+        borderRadius: 3,
+      }],
+    },
+    options: { indexAxis: "y", plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, grid: { color: GRID } }, y: { grid: { display: false } } } },
+  });
+  $("#detailCard").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+["search", "riskFilter", "stageFilter"].forEach(function (id) {
+  document.getElementById(id).addEventListener("input", paint);
+});
+paint();
+</script>
+{% endblock %}
